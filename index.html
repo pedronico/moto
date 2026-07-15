@@ -16,11 +16,11 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .pb{height:3px;background:#e0e0de;margin-bottom:1rem;border-radius:2px;overflow:hidden}
 .pf{height:100%;background:#2d9e75;border-radius:2px;transition:width .3s}
 .sec{margin-bottom:.75rem;background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
-.sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de}
+.sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de;align-items:center}
 .sh b{font-size:13px;font-weight:500}
 .sc{font-size:12px;color:#999;margin-left:auto}
+.delsec{font-size:14px;color:#ccc;margin-left:8px;cursor:pointer;border:none;background:none}
 .it{border-bottom:1px solid #f0f0ee}
-.it:last-child{border-bottom:none}
 .itrow{display:flex;gap:10px;padding:.55rem 1rem;cursor:pointer;user-select:none;align-items:flex-start}
 .itrow:active{background:#f5f5f3}
 .badge{flex-shrink:0;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:1px;white-space:nowrap;letter-spacing:.02em}
@@ -35,16 +35,24 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .nt{font-size:12px;color:#aaa;margin-top:1px}
 .lnk{font-size:12px;margin-top:2px}
 .lnk a{color:#2b5fad;word-break:break-all}
-.opts{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-wrap:wrap}
+.opts{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-wrap:wrap;align-items:center}
 .opts.open{display:flex}
 .op{font-size:11.5px;padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#fafafa;cursor:pointer;color:#555}
 .op:active{transform:scale(.96)}
-.op.sel{border-color:currentColor;font-weight:600}
 .op-ok{color:#1d7d5a}.op-test{color:#9a6b12}.op-ordered{color:#2b5fad}.op-toorder{color:#b3382c}.op-skip{color:#888}.op-clear{color:#bbb}
+.op-del{color:#b3382c;border-color:#eebbb5}
+.op-mv{color:#888;padding:4px 8px}
 .linkbox{display:none;width:100%;margin-top:6px}
 .linkbox.open{display:flex;gap:6px}
 .linkbox input{flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12.5px}
-.linkbox button{padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:12px;cursor:pointer}
+.linkbox button,.addbox button,#addsec button{padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:12px;cursor:pointer}
+.addrow{padding:.45rem 1rem;font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
+.addbox{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-direction:column}
+.addbox.open{display:flex}
+.addbox input{padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+#addsec{margin-top:.5rem}
+#addsec .addbox{padding:.4rem 0}
+#addseclink{font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
 #skipwrap{margin-top:1.25rem;display:none}
 #skipwrap h2{font-size:13px;font-weight:500;color:#999;margin-bottom:.5rem}
 #skiplist{background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
@@ -67,6 +75,13 @@ Per salvare le modifiche serve il token GitHub (una volta sola, resta su questo 
 <div class="top"><span id="sum">Caricamento…</span><span><button class="rb" onclick="askTok()">Token</button><button class="rb" onclick="rst()">Reset</button></span></div>
 <div class="pb"><div class="pf" id="pf" style="width:0%"></div></div>
 <div id="cl"></div>
+<div id="addsec">
+  <span id="addseclink" onclick="toggleAddSec()">+ nuova categoria</span>
+  <div class="addbox" id="addsecbox">
+    <input id="secname" placeholder="nome categoria">
+    <button onclick="addSection()">Aggiungi categoria</button>
+  </div>
+</div>
 <div id="skipwrap"><h2>Non più necessari</h2><div id="skiplist"></div></div>
 <div id="status"></div>
 </div>
@@ -88,188 +103,238 @@ const STATES={
   toorder:{label:"DA ORDINARE",badge:"b-toorder"},
 };
 
-const D=[
-  {l:"Dormire",i:[
-    ["DD Frontline Hammock"],
-    ["Tarp","Essenziale, temporali improvvisi anche ad agosto al sud"],
-    ["Corda sottile 5-6m"],
-    ["Liner / lenzuolo sacco","Al posto del sacco 5°C, agosto al sud è caldo"],
-    ["DD Underblanket","Probabilmente non necessario ad agosto, valuta"],
+// Default structure, used only on first load / migration
+const DEFAULT=[
+  {l:"Dormire",items:[
+    {t:"DD Frontline Hammock"},
+    {t:"Tarp",n:"Essenziale, temporali improvvisi anche ad agosto al sud"},
+    {t:"Corda sottile 5-6m"},
+    {t:"Liner / lenzuolo sacco",n:"Al posto del sacco 5°C, agosto al sud è caldo"},
+    {t:"DD Underblanket",n:"Probabilmente non necessario ad agosto, valuta"},
   ]},
-  {l:"Repellenti insetti",i:[
-    ["Icaridina 20%"],
-    ["Permethrin","Da applicare sui vestiti"],
-    ["Flextail Tiny Repeller S","Ha luce integrata, valuta se serve anche la lanterna"],
+  {l:"Repellenti insetti",items:[
+    {t:"Icaridina 20%"},
+    {t:"Permethrin",n:"Da applicare sui vestiti"},
+    {t:"Flextail Tiny Repeller S",n:"Ha luce integrata, valuta se serve anche la lanterna"},
   ]},
-  {l:"Illuminazione",i:[
-    ["Lampada frontale"],
-    ["Nitecore LR40","Valuta se necessaria, Flextail ha già una luce"],
+  {l:"Illuminazione",items:[
+    {t:"Lampada frontale"},
+    {t:"Nitecore LR40",n:"Valuta se necessaria, Flextail ha già una luce"},
   ]},
-  {l:"Elettronica",i:[
-    ["Power bank (10.000-20.000 mAh)"],
-    ["Caricatore USB da manubrio"],
+  {l:"Elettronica",items:[
+    {t:"Power bank (10.000-20.000 mAh)"},
+    {t:"Caricatore USB da manubrio"},
   ]},
-  {l:"Cucina",i:[
-    ["Fornellino + pentolino"],
-    ["Cartucce gas di riserva","Al sud in zone remote possono essere difficili da trovare"],
-    ["Accendino + riserva"],
-    ["Multitool tipo Leatherman","Copre sia multitool meccanico che coltellino"],
+  {l:"Cucina",items:[
+    {t:"Fornellino + pentolino"},
+    {t:"Cartucce gas di riserva",n:"Al sud in zone remote possono essere difficili da trovare"},
+    {t:"Accendino + riserva"},
+    {t:"Multitool tipo Leatherman",n:"Copre sia multitool meccanico che coltellino"},
   ]},
-  {l:"Moto & riparazioni",i:[
-    ["Dynaplug + inserter (tubeless)"],
-    ["CO2 cartucce 16g x3 + adattatore"],
-    ["Leve smontaggio pneumatico"],
-    ["Camera d'aria emergenza","Misura Himalayan"],
-    ["Compressore Xiaomi Air 2"],
-    ["Acqua saponata + guanti monouso"],
-    ["Jump starter (NOCO GB40 o GB20)"],
-    ["Fascette + nastro americano + fil di ferro"],
-    ["Fusibili di ricambio Himalayan"],
+  {l:"Moto & riparazioni",items:[
+    {t:"Dynaplug + inserter (tubeless)"},
+    {t:"CO2 cartucce 16g x3 + adattatore"},
+    {t:"Leve smontaggio pneumatico"},
+    {t:"Camera d'aria emergenza",n:"Misura Himalayan"},
+    {t:"Compressore Xiaomi Air 2"},
+    {t:"Acqua saponata + guanti monouso"},
+    {t:"Jump starter (NOCO GB40 o GB20)"},
+    {t:"Fascette + nastro americano + fil di ferro"},
+    {t:"Fusibili di ricambio Himalayan"},
   ]},
-  {l:"Salute & igiene",i:[
-    ["Kit pronto soccorso base"],
-    ["Crema solare alta protezione"],
-    ["Pastiglie Micropur","Purificazione acqua, più compatte del Sawyer Squeeze"],
+  {l:"Salute & igiene",items:[
+    {t:"Kit pronto soccorso base"},
+    {t:"Crema solare alta protezione"},
+    {t:"Pastiglie Micropur",n:"Purificazione acqua, più compatte del Sawyer Squeeze"},
   ]},
-  {l:"Organizzazione",i:[
-    ["Dry bag / sacchetti impermeabili","Per elettronica e documenti"],
-    ["Cuscino comprimibile"],
+  {l:"Organizzazione",items:[
+    {t:"Dry bag / sacchetti impermeabili",n:"Per elettronica e documenti"},
+    {t:"Cuscino comprimibile"},
   ]},
 ];
 
-// items: { "0_0": {s:"ok"|"test"|"ordered"|"toorder"|"skip", link:"..."} }
-let items={};
-let tot=0,saveTimer=null;
-const NAME={};
+let SEC=[]; // live structure: [{l, items:[{t,n,s,link}]}]
+let saveTimer=null,openId=null;
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 
 const cl=document.getElementById("cl");
-D.forEach((s,si)=>{
-  const d=document.createElement("div");
-  d.className="sec";
-  d.innerHTML=`<div class="sh"><b>${s.l}</b><span class="sc" id="c${si}"></span></div>`;
-  s.i.forEach((it,ii)=>{
-    tot++;
-    const id=`${si}_${ii}`;
-    NAME[id]=it[0];
-    const w=document.createElement("div");
-    w.className="it";w.id="w"+id;
-    w.innerHTML=`
-<div class="itrow" onclick="toggleOpts('${id}')">
-  <span class="badge b-none" id="bd${id}">—</span>
-  <div style="flex:1">
-    <div class="lb">${it[0]}</div>
-    ${it[1]?`<div class="nt">${it[1]}</div>`:""}
-    <div class="lnk" id="lk${id}"></div>
-  </div>
-</div>
-<div class="opts" id="op${id}">
-  <span class="op op-ok" onclick="setState('${id}','ok',event)">OK</span>
-  <span class="op op-test" onclick="setState('${id}','test',event)">Da installare/testare</span>
-  <span class="op op-ordered" onclick="setState('${id}','ordered',event)">Ordinato</span>
-  <span class="op op-toorder" onclick="setState('${id}','toorder',event)">Da ordinare</span>
-  <span class="op op-skip" onclick="setState('${id}','skip',event)">Non più necessario</span>
-  <span class="op op-clear" onclick="setState('${id}',null,event)">Azzera</span>
-  <div class="linkbox" id="lb${id}">
-    <input type="url" id="li${id}" placeholder="link prodotto (opzionale)">
-    <button onclick="saveLink('${id}',event)">Salva</button>
-  </div>
-</div>`;
-    d.appendChild(w);
-  });
-  cl.appendChild(d);
-});
-
-function toggleOpts(id){
-  const el=document.getElementById("op"+id);
-  const wasOpen=el.classList.contains("open");
-  document.querySelectorAll(".opts.open").forEach(e=>e.classList.remove("open"));
-  if(!wasOpen)el.classList.add("open");
-  // preload link input
-  const li=document.getElementById("li"+id);
-  if(li)li.value=(items[id]&&items[id].link)||"";
-  const lb=document.getElementById("lb"+id);
-  lb.classList.toggle("open",!!(items[id]&&items[id].s==="toorder"));
-}
-
-function setState(id,s,ev){
-  ev.stopPropagation();
-  if(s===null){delete items[id];}
-  else{
-    items[id]=items[id]||{};
-    items[id].s=s;
-    if(s!=="toorder")delete items[id].link;
-  }
-  const lb=document.getElementById("lb"+id);
-  if(s==="toorder"){
-    lb.classList.add("open");
-    document.getElementById("li"+id).focus();
-  }else{
-    lb.classList.remove("open");
-    document.getElementById("op"+id).classList.remove("open");
-  }
-  render();
-  scheduleSave();
-}
-
-function saveLink(id,ev){
-  ev.stopPropagation();
-  const v=document.getElementById("li"+id).value.trim();
-  if(!items[id])items[id]={s:"toorder"};
-  if(v)items[id].link=v;else delete items[id].link;
-  document.getElementById("op"+id).classList.remove("open");
-  document.getElementById("lb"+id).classList.remove("open");
-  render();
-  scheduleSave();
-}
 
 function render(){
-  let okCount=0,active=0;
+  cl.innerHTML="";
   const skiplist=document.getElementById("skiplist");
   skiplist.innerHTML="";
-  let skipped=0;
-  D.forEach((s,si)=>{
+  let okCount=0,active=0,skipped=0;
+
+  SEC.forEach((sec,si)=>{
+    const d=document.createElement("div");
+    d.className="sec";
     let secOk=0,secActive=0;
-    s.i.forEach((it,ii)=>{
-      const id=`${si}_${ii}`;
-      const st=items[id]&&items[id].s;
-      const w=document.getElementById("w"+id);
-      const bd=document.getElementById("bd"+id);
-      const lk=document.getElementById("lk"+id);
-      w.className="it"+(st==="ok"?" s-ok":"");
-      if(st==="skip"){
-        w.style.display="none";
+    const visItems=[];
+    sec.items.forEach((it,ii)=>{
+      if(it.s==="skip"){
         skipped++;
         const row=document.createElement("div");
         row.className="skipit";
-        row.textContent=it[0];
+        row.textContent=it.t;
         row.title="Tocca per ripristinare";
-        row.onclick=()=>{delete items[id];render();scheduleSave();};
+        row.onclick=()=>{delete it.s;render();scheduleSave();};
         skiplist.appendChild(row);
         return;
       }
-      w.style.display="";
+      visItems.push(ii);
       active++;secActive++;
-      if(st&&STATES[st]){
-        bd.textContent=STATES[st].label;
-        bd.className="badge "+STATES[st].badge;
-      }else{
-        bd.textContent="—";
-        bd.className="badge b-none";
-      }
-      if(st==="ok"){okCount++;secOk++;}
-      lk.innerHTML=(items[id]&&items[id].link&&st==="toorder")?`<a href="${items[id].link.replace(/"/g,'')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${items[id].link}</a>`:"";
+      if(it.s==="ok"){okCount++;secOk++;}
     });
-    document.getElementById("c"+si).textContent=secActive?secOk+"/"+secActive:"—";
+
+    const emptyDel=sec.items.length===0?`<button class="delsec" onclick="delSection(${si})" title="Elimina categoria">✕</button>`:"";
+    d.innerHTML=`<div class="sh"><b>${esc(sec.l)}</b><span class="sc">${secActive?secOk+"/"+secActive:"—"}</span>${emptyDel}</div>`;
+
+    sec.items.forEach((it,ii)=>{
+      if(it.s==="skip")return;
+      const id=si+"_"+ii;
+      const st=it.s;
+      const w=document.createElement("div");
+      w.className="it"+(st==="ok"?" s-ok":"");
+      const badge=st&&STATES[st]?`<span class="badge ${STATES[st].badge}">${STATES[st].label}</span>`:`<span class="badge b-none">—</span>`;
+      const link=(it.link&&st==="toorder")?`<div class="lnk"><a href="${esc(it.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(it.link)}</a></div>`:"";
+      w.innerHTML=`
+<div class="itrow" onclick="toggleOpts('${id}')">
+  ${badge}
+  <div style="flex:1">
+    <div class="lb">${esc(it.t)}</div>
+    ${it.n?`<div class="nt">${esc(it.n)}</div>`:""}
+    ${link}
+  </div>
+</div>
+<div class="opts${openId===id?' open':''}" id="op${id}">
+  <span class="op op-ok" onclick="setState(${si},${ii},'ok',event)">OK</span>
+  <span class="op op-test" onclick="setState(${si},${ii},'test',event)">Da installare/testare</span>
+  <span class="op op-ordered" onclick="setState(${si},${ii},'ordered',event)">Ordinato</span>
+  <span class="op op-toorder" onclick="setState(${si},${ii},'toorder',event)">Da ordinare</span>
+  <span class="op op-skip" onclick="setState(${si},${ii},'skip',event)">Non più necessario</span>
+  <span class="op op-clear" onclick="setState(${si},${ii},null,event)">Azzera</span>
+  <span class="op op-mv" onclick="move(${si},${ii},-1,event)" title="Sposta su">↑</span>
+  <span class="op op-mv" onclick="move(${si},${ii},1,event)" title="Sposta giù">↓</span>
+  <span class="op op-del" onclick="delItem(${si},${ii},event)">Elimina</span>
+  <div class="linkbox${(st==='toorder')?' open':''}" id="lb${id}">
+    <input type="url" id="li${id}" placeholder="link prodotto (opzionale)" value="${esc(it.link||'')}">
+    <button onclick="saveLink(${si},${ii},event)">Salva</button>
+  </div>
+</div>`;
+      d.appendChild(w);
+    });
+
+    // add-item row
+    const ar=document.createElement("div");
+    ar.innerHTML=`<div class="addrow" onclick="toggleAdd(${si})">+ aggiungi voce</div>
+<div class="addbox" id="ab${si}">
+  <input id="ai${si}" placeholder="nome voce">
+  <input id="an${si}" placeholder="nota (opzionale)">
+  <button onclick="addItem(${si})">Aggiungi</button>
+</div>`;
+    d.appendChild(ar);
+    cl.appendChild(d);
   });
+
   document.getElementById("skipwrap").style.display=skipped?"block":"none";
   const p=active?Math.round(okCount/active*100):0;
   document.getElementById("pf").style.width=p+"%";
   document.getElementById("sum").textContent=okCount+" di "+active+" pronti ("+p+"%)";
 }
 
+function toggleOpts(id){
+  openId=(openId===id)?null:id;
+  render();
+}
+
+function setState(si,ii,s,ev){
+  ev.stopPropagation();
+  const it=SEC[si].items[ii];
+  if(s===null){delete it.s;delete it.link;openId=null;}
+  else{
+    it.s=s;
+    if(s!=="toorder"){delete it.link;openId=null;}
+    // keep panel open for toorder so link input is visible
+  }
+  render();
+  if(s==="toorder"){const li=document.getElementById("li"+si+"_"+ii);if(li)li.focus();}
+  scheduleSave();
+}
+
+function saveLink(si,ii,ev){
+  ev.stopPropagation();
+  const v=document.getElementById("li"+si+"_"+ii).value.trim();
+  const it=SEC[si].items[ii];
+  if(v)it.link=v;else delete it.link;
+  openId=null;
+  render();
+  scheduleSave();
+}
+
+function move(si,ii,dir,ev){
+  ev.stopPropagation();
+  const arr=SEC[si].items;
+  const j=ii+dir;
+  if(j<0||j>=arr.length)return;
+  [arr[ii],arr[j]]=[arr[j],arr[ii]];
+  openId=si+"_"+j;
+  render();
+  scheduleSave();
+}
+
+function delItem(si,ii,ev){
+  ev.stopPropagation();
+  if(!confirm('Eliminare "'+SEC[si].items[ii].t+'"?'))return;
+  SEC[si].items.splice(ii,1);
+  openId=null;
+  render();
+  scheduleSave();
+}
+
+function toggleAdd(si){
+  document.getElementById("ab"+si).classList.toggle("open");
+  const i=document.getElementById("ai"+si);
+  if(document.getElementById("ab"+si).classList.contains("open"))i.focus();
+}
+
+function addItem(si){
+  const t=document.getElementById("ai"+si).value.trim();
+  if(!t)return;
+  const n=document.getElementById("an"+si).value.trim();
+  const it={t};
+  if(n)it.n=n;
+  SEC[si].items.push(it);
+  render();
+  scheduleSave();
+}
+
+function toggleAddSec(){
+  document.getElementById("addsecbox").classList.toggle("open");
+  document.getElementById("secname").focus();
+}
+
+function addSection(){
+  const l=document.getElementById("secname").value.trim();
+  if(!l)return;
+  SEC.push({l,items:[]});
+  document.getElementById("secname").value="";
+  document.getElementById("addsecbox").classList.remove("open");
+  render();
+  scheduleSave();
+}
+
+function delSection(si){
+  if(SEC[si].items.length>0)return;
+  if(!confirm('Eliminare la categoria "'+SEC[si].l+'"?'))return;
+  SEC.splice(si,1);
+  render();
+  scheduleSave();
+}
+
 function rst(){
-  if(!confirm("Reset tutti gli stati?"))return;
-  items={};
+  if(!confirm("Reset: azzera tutti gli stati (le voci restano)?"))return;
+  SEC.forEach(s=>s.items.forEach(it=>{delete it.s;delete it.link;}));
   render();
   scheduleSave();
 }
@@ -283,7 +348,7 @@ async function save(){
   if(!tok()){askTok();document.getElementById("status").textContent="serve il token per salvare";return;}
   document.getElementById("status").textContent="salvataggio…";
   try{
-    const content=b64encode(JSON.stringify({items,updated:new Date().toISOString()}));
+    const content=b64encode(JSON.stringify({sections:SEC,updated:new Date().toISOString()}));
     let body=JSON.stringify({message:"update checklist",content,sha:SHA});
     let r=await fetch(API,{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body});
     if(!r.ok&&(r.status===409||r.status===422)){
@@ -311,20 +376,38 @@ async function refreshSHA(){
   return j;
 }
 
+function migrate(state){
+  // Newest format
+  if(state.sections)return state.sections;
+  // items format {id:{s,link}} -> merge into DEFAULT
+  const sec=JSON.parse(JSON.stringify(DEFAULT));
+  if(state.items){
+    Object.entries(state.items).forEach(([id,v])=>{
+      const [si,ii]=id.split("_").map(Number);
+      if(sec[si]&&sec[si].items[ii]){
+        if(v.s)sec[si].items[ii].s=v.s;
+        if(v.link)sec[si].items[ii].link=v.link;
+      }
+    });
+  }else if(state.checked){
+    state.checked.forEach(id=>{
+      const [si,ii]=id.split("_").map(Number);
+      if(sec[si]&&sec[si].items[ii])sec[si].items[ii].s="ok";
+    });
+  }
+  return sec;
+}
+
 async function load(){
   try{
     const j=await refreshSHA();
     const state=JSON.parse(b64decode(j.content.replace(/\n/g,"")));
-    if(state.items){
-      items=state.items;
-    }else if(state.checked){
-      // migrate old format: checked -> ok
-      state.checked.forEach(id=>{items[id]={s:"ok"};});
-    }
+    SEC=migrate(state);
     render();
     if(state.updated)document.getElementById("status").textContent="ultimo salvataggio: "+new Date(state.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     if(!tok())askTok();
   }catch(e){
+    SEC=JSON.parse(JSON.stringify(DEFAULT));
     render();
     document.getElementById("status").textContent="impossibile caricare lo stato";
   }
