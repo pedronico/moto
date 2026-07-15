@@ -19,14 +19,37 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de}
 .sh b{font-size:13px;font-weight:500}
 .sc{font-size:12px;color:#999;margin-left:auto}
-.it{display:flex;gap:10px;padding:.55rem 1rem;border-bottom:1px solid #f0f0ee;cursor:pointer;user-select:none}
+.it{border-bottom:1px solid #f0f0ee}
 .it:last-child{border-bottom:none}
-.it:active{background:#f5f5f3}
-.it.on{opacity:.45}
-.it.on .lb{text-decoration:line-through;color:#aaa}
-.mk{width:22px;flex-shrink:0;font-size:13px;color:#2d9e75;font-weight:700}
+.itrow{display:flex;gap:10px;padding:.55rem 1rem;cursor:pointer;user-select:none;align-items:flex-start}
+.itrow:active{background:#f5f5f3}
+.badge{flex-shrink:0;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:1px;white-space:nowrap;letter-spacing:.02em}
+.b-none{background:#eee;color:#999}
+.b-ok{background:#e1f5ee;color:#1d7d5a}
+.b-test{background:#fdf1dc;color:#9a6b12}
+.b-ordered{background:#e3edfb;color:#2b5fad}
+.b-toorder{background:#fde4e1;color:#b3382c}
+.it.s-ok .lb{color:#aaa;text-decoration:line-through}
+.it.s-ok{opacity:.55}
 .lb{font-size:14px;line-height:1.4}
 .nt{font-size:12px;color:#aaa;margin-top:1px}
+.lnk{font-size:12px;margin-top:2px}
+.lnk a{color:#2b5fad;word-break:break-all}
+.opts{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-wrap:wrap}
+.opts.open{display:flex}
+.op{font-size:11.5px;padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#fafafa;cursor:pointer;color:#555}
+.op:active{transform:scale(.96)}
+.op.sel{border-color:currentColor;font-weight:600}
+.op-ok{color:#1d7d5a}.op-test{color:#9a6b12}.op-ordered{color:#2b5fad}.op-toorder{color:#b3382c}.op-skip{color:#888}.op-clear{color:#bbb}
+.linkbox{display:none;width:100%;margin-top:6px}
+.linkbox.open{display:flex;gap:6px}
+.linkbox input{flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12.5px}
+.linkbox button{padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:12px;cursor:pointer}
+#skipwrap{margin-top:1.25rem;display:none}
+#skipwrap h2{font-size:13px;font-weight:500;color:#999;margin-bottom:.5rem}
+#skiplist{background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
+.skipit{display:flex;gap:10px;padding:.5rem 1rem;border-bottom:1px solid #f0f0ee;cursor:pointer;font-size:13.5px;color:#aaa;text-decoration:line-through}
+.skipit:last-child{border-bottom:none}
 #status{font-size:11px;color:#bbb;text-align:right;margin-top:.75rem}
 #tokbar{display:none;background:#fff8e5;border:1px solid #eedfa8;border-radius:8px;padding:.6rem .8rem;margin-bottom:1rem;font-size:13px}
 #tokbar input{width:100%;margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px}
@@ -44,6 +67,7 @@ Per salvare le modifiche serve il token GitHub (una volta sola, resta su questo 
 <div class="top"><span id="sum">Caricamento…</span><span><button class="rb" onclick="askTok()">Token</button><button class="rb" onclick="rst()">Reset</button></span></div>
 <div class="pb"><div class="pf" id="pf" style="width:0%"></div></div>
 <div id="cl"></div>
+<div id="skipwrap"><h2>Non più necessari</h2><div id="skiplist"></div></div>
 <div id="status"></div>
 </div>
 <script>
@@ -56,6 +80,13 @@ function saveTok(){
   const v=document.getElementById('tok').value.trim();
   if(v){localStorage.setItem('gh_token',v);document.getElementById('tokbar').style.display='none';document.getElementById('status').textContent='token salvato su questo dispositivo';}
 }
+
+const STATES={
+  ok:{label:"OK",badge:"b-ok"},
+  test:{label:"DA TESTARE",badge:"b-test"},
+  ordered:{label:"ORDINATO",badge:"b-ordered"},
+  toorder:{label:"DA ORDINARE",badge:"b-toorder"},
+};
 
 const D=[
   {l:"Dormire",i:[
@@ -106,55 +137,144 @@ const D=[
   ]},
 ];
 
-const ck=new Set();
+// items: { "0_0": {s:"ok"|"test"|"ordered"|"toorder"|"skip", link:"..."} }
+let items={};
 let tot=0,saveTimer=null;
-const cl=document.getElementById("cl");
+const NAME={};
 
+const cl=document.getElementById("cl");
 D.forEach((s,si)=>{
   const d=document.createElement("div");
   d.className="sec";
-  d.innerHTML=`<div class="sh"><b>${s.l}</b><span class="sc" id="c${si}">0/${s.i.length}</span></div>`;
+  d.innerHTML=`<div class="sh"><b>${s.l}</b><span class="sc" id="c${si}"></span></div>`;
   s.i.forEach((it,ii)=>{
     tot++;
     const id=`${si}_${ii}`;
-    const r=document.createElement("div");
-    r.className="it";r.id="r"+id;
-    r.onclick=()=>tog(id,si,s.i.length);
-    r.innerHTML=`<span class="mk" id="b${id}">[ ]</span><div><div class="lb">${it[0]}</div>${it[1]?`<div class="nt">${it[1]}</div>`:""}</div>`;
-    d.appendChild(r);
+    NAME[id]=it[0];
+    const w=document.createElement("div");
+    w.className="it";w.id="w"+id;
+    w.innerHTML=`
+<div class="itrow" onclick="toggleOpts('${id}')">
+  <span class="badge b-none" id="bd${id}">—</span>
+  <div style="flex:1">
+    <div class="lb">${it[0]}</div>
+    ${it[1]?`<div class="nt">${it[1]}</div>`:""}
+    <div class="lnk" id="lk${id}"></div>
+  </div>
+</div>
+<div class="opts" id="op${id}">
+  <span class="op op-ok" onclick="setState('${id}','ok',event)">OK</span>
+  <span class="op op-test" onclick="setState('${id}','test',event)">Da installare/testare</span>
+  <span class="op op-ordered" onclick="setState('${id}','ordered',event)">Ordinato</span>
+  <span class="op op-toorder" onclick="setState('${id}','toorder',event)">Da ordinare</span>
+  <span class="op op-skip" onclick="setState('${id}','skip',event)">Non più necessario</span>
+  <span class="op op-clear" onclick="setState('${id}',null,event)">Azzera</span>
+  <div class="linkbox" id="lb${id}">
+    <input type="url" id="li${id}" placeholder="link prodotto (opzionale)">
+    <button onclick="saveLink('${id}',event)">Salva</button>
+  </div>
+</div>`;
+    d.appendChild(w);
   });
   cl.appendChild(d);
 });
 
-function updateUI(){
-  const p=Math.round(ck.size/tot*100);
-  document.getElementById("pf").style.width=p+"%";
-  document.getElementById("sum").textContent=ck.size+" di "+tot+" pronti ("+p+"%)";
-  D.forEach((_,si)=>{
-    const c=[...ck].filter(x=>x.startsWith(si+"_")).length;
-    document.getElementById("c"+si).textContent=c+"/"+D[si].i.length;
-  });
+function toggleOpts(id){
+  const el=document.getElementById("op"+id);
+  const wasOpen=el.classList.contains("open");
+  document.querySelectorAll(".opts.open").forEach(e=>e.classList.remove("open"));
+  if(!wasOpen)el.classList.add("open");
+  // preload link input
+  const li=document.getElementById("li"+id);
+  if(li)li.value=(items[id]&&items[id].link)||"";
+  const lb=document.getElementById("lb"+id);
+  lb.classList.toggle("open",!!(items[id]&&items[id].s==="toorder"));
 }
 
-function tog(id,si,n){
-  ck.has(id)?ck.delete(id):ck.add(id);
-  const on=ck.has(id);
-  document.getElementById("r"+id).classList.toggle("on",on);
-  document.getElementById("b"+id).textContent=on?"[x]":"[ ]";
-  updateUI();
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(save,1200);
+function setState(id,s,ev){
+  ev.stopPropagation();
+  if(s===null){delete items[id];}
+  else{
+    items[id]=items[id]||{};
+    items[id].s=s;
+    if(s!=="toorder")delete items[id].link;
+  }
+  const lb=document.getElementById("lb"+id);
+  if(s==="toorder"){
+    lb.classList.add("open");
+    document.getElementById("li"+id).focus();
+  }else{
+    lb.classList.remove("open");
+    document.getElementById("op"+id).classList.remove("open");
+  }
+  render();
+  scheduleSave();
+}
+
+function saveLink(id,ev){
+  ev.stopPropagation();
+  const v=document.getElementById("li"+id).value.trim();
+  if(!items[id])items[id]={s:"toorder"};
+  if(v)items[id].link=v;else delete items[id].link;
+  document.getElementById("op"+id).classList.remove("open");
+  document.getElementById("lb"+id).classList.remove("open");
+  render();
+  scheduleSave();
+}
+
+function render(){
+  let okCount=0,active=0;
+  const skiplist=document.getElementById("skiplist");
+  skiplist.innerHTML="";
+  let skipped=0;
+  D.forEach((s,si)=>{
+    let secOk=0,secActive=0;
+    s.i.forEach((it,ii)=>{
+      const id=`${si}_${ii}`;
+      const st=items[id]&&items[id].s;
+      const w=document.getElementById("w"+id);
+      const bd=document.getElementById("bd"+id);
+      const lk=document.getElementById("lk"+id);
+      w.className="it"+(st==="ok"?" s-ok":"");
+      if(st==="skip"){
+        w.style.display="none";
+        skipped++;
+        const row=document.createElement("div");
+        row.className="skipit";
+        row.textContent=it[0];
+        row.title="Tocca per ripristinare";
+        row.onclick=()=>{delete items[id];render();scheduleSave();};
+        skiplist.appendChild(row);
+        return;
+      }
+      w.style.display="";
+      active++;secActive++;
+      if(st&&STATES[st]){
+        bd.textContent=STATES[st].label;
+        bd.className="badge "+STATES[st].badge;
+      }else{
+        bd.textContent="—";
+        bd.className="badge b-none";
+      }
+      if(st==="ok"){okCount++;secOk++;}
+      lk.innerHTML=(items[id]&&items[id].link&&st==="toorder")?`<a href="${items[id].link.replace(/"/g,'')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${items[id].link}</a>`:"";
+    });
+    document.getElementById("c"+si).textContent=secActive?secOk+"/"+secActive:"—";
+  });
+  document.getElementById("skipwrap").style.display=skipped?"block":"none";
+  const p=active?Math.round(okCount/active*100):0;
+  document.getElementById("pf").style.width=p+"%";
+  document.getElementById("sum").textContent=okCount+" di "+active+" pronti ("+p+"%)";
 }
 
 function rst(){
-  if(!confirm("Reset tutte le spunte?"))return;
-  ck.clear();
-  document.querySelectorAll(".it").forEach(e=>e.classList.remove("on"));
-  document.querySelectorAll(".mk").forEach(e=>e.textContent="[ ]");
-  updateUI();
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(save,500);
+  if(!confirm("Reset tutti gli stati?"))return;
+  items={};
+  render();
+  scheduleSave();
 }
+
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,1200);}
 
 function b64encode(str){return btoa(unescape(encodeURIComponent(str)));}
 function b64decode(str){return decodeURIComponent(escape(atob(str)));}
@@ -163,7 +283,7 @@ async function save(){
   if(!tok()){askTok();document.getElementById("status").textContent="serve il token per salvare";return;}
   document.getElementById("status").textContent="salvataggio…";
   try{
-    const content=b64encode(JSON.stringify({checked:[...ck],updated:new Date().toISOString()}));
+    const content=b64encode(JSON.stringify({items,updated:new Date().toISOString()}));
     let body=JSON.stringify({message:"update checklist",content,sha:SHA});
     let r=await fetch(API,{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body});
     if(!r.ok&&(r.status===409||r.status===422)){
@@ -195,19 +315,17 @@ async function load(){
   try{
     const j=await refreshSHA();
     const state=JSON.parse(b64decode(j.content.replace(/\n/g,"")));
-    if(state.checked){
-      state.checked.forEach(id=>{
-        if(!document.getElementById("r"+id))return;
-        ck.add(id);
-        document.getElementById("r"+id).classList.add("on");
-        document.getElementById("b"+id).textContent="[x]";
-      });
+    if(state.items){
+      items=state.items;
+    }else if(state.checked){
+      // migrate old format: checked -> ok
+      state.checked.forEach(id=>{items[id]={s:"ok"};});
     }
-    updateUI();
+    render();
     if(state.updated)document.getElementById("status").textContent="ultimo salvataggio: "+new Date(state.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     if(!tok())askTok();
   }catch(e){
-    updateUI();
+    render();
     document.getElementById("status").textContent="impossibile caricare lo stato";
   }
 }
