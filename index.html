@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Checklist Moto — Agosto</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f3;padding:1rem;color:#1a1a18}
+.wrap{max-width:580px;margin:0 auto}
+h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+#sum{font-size:13px;color:#888}
+.rb{font-size:12px;color:#888;background:none;border:1px solid #ccc;border-radius:6px;padding:3px 10px;cursor:pointer;margin-left:6px}
+.pb{height:3px;background:#e0e0de;margin-bottom:1rem;border-radius:2px;overflow:hidden}
+.pf{height:100%;background:#2d9e75;border-radius:2px;transition:width .3s}
+.sec{margin-bottom:.75rem;background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
+.sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de}
+.sh b{font-size:13px;font-weight:500}
+.sc{font-size:12px;color:#999;margin-left:auto}
+.it{display:flex;gap:10px;padding:.55rem 1rem;border-bottom:1px solid #f0f0ee;cursor:pointer;user-select:none}
+.it:last-child{border-bottom:none}
+.it:active{background:#f5f5f3}
+.it.on{opacity:.45}
+.it.on .lb{text-decoration:line-through;color:#aaa}
+.mk{width:22px;flex-shrink:0;font-size:13px;color:#2d9e75;font-weight:700}
+.lb{font-size:14px;line-height:1.4}
+.nt{font-size:12px;color:#aaa;margin-top:1px}
+#status{font-size:11px;color:#bbb;text-align:right;margin-top:.75rem}
+#tokbar{display:none;background:#fff8e5;border:1px solid #eedfa8;border-radius:8px;padding:.6rem .8rem;margin-bottom:1rem;font-size:13px}
+#tokbar input{width:100%;margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+#tokbar button{margin-top:6px;padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Checklist camping moto</h1>
+<div id="tokbar">
+Per salvare le modifiche serve il token GitHub (una volta sola, resta su questo dispositivo):
+<input type="password" id="tok" placeholder="github_pat_...">
+<button onclick="saveTok()">Salva token</button>
+</div>
+<div class="top"><span id="sum">Caricamento…</span><span><button class="rb" onclick="askTok()">Token</button><button class="rb" onclick="rst()">Reset</button></span></div>
+<div class="pb"><div class="pf" id="pf" style="width:0%"></div></div>
+<div id="cl"></div>
+<div id="status"></div>
+</div>
+<script>
+const API='https://api.github.com/repos/pedronico/moto/contents/state.json';
+let SHA=null;
+function tok(){return localStorage.getItem('gh_token')||'';}
+function hdr(){const h={'Accept':'application/vnd.github+json'};const t=tok();if(t)h['Authorization']='Bearer '+t;return h;}
+function askTok(){document.getElementById('tokbar').style.display='block';}
+function saveTok(){
+  const v=document.getElementById('tok').value.trim();
+  if(v){localStorage.setItem('gh_token',v);document.getElementById('tokbar').style.display='none';document.getElementById('status').textContent='token salvato su questo dispositivo';}
+}
+
+const D=[
+  {l:"Dormire",i:[
+    ["DD Frontline Hammock"],
+    ["Tarp","Essenziale, temporali improvvisi anche ad agosto al sud"],
+    ["Corda sottile 5-6m"],
+    ["Liner / lenzuolo sacco","Al posto del sacco 5°C, agosto al sud è caldo"],
+    ["DD Underblanket","Probabilmente non necessario ad agosto, valuta"],
+  ]},
+  {l:"Repellenti insetti",i:[
+    ["Icaridina 20%"],
+    ["Permethrin","Da applicare sui vestiti"],
+    ["Flextail Tiny Repeller S","Ha luce integrata, valuta se serve anche la lanterna"],
+  ]},
+  {l:"Illuminazione",i:[
+    ["Lampada frontale"],
+    ["Nitecore LR40","Valuta se necessaria, Flextail ha già una luce"],
+  ]},
+  {l:"Elettronica",i:[
+    ["Power bank (10.000-20.000 mAh)"],
+    ["Caricatore USB da manubrio"],
+  ]},
+  {l:"Cucina",i:[
+    ["Fornellino + pentolino"],
+    ["Cartucce gas di riserva","Al sud in zone remote possono essere difficili da trovare"],
+    ["Accendino + riserva"],
+    ["Multitool tipo Leatherman","Copre sia multitool meccanico che coltellino"],
+  ]},
+  {l:"Moto & riparazioni",i:[
+    ["Dynaplug + inserter (tubeless)"],
+    ["CO2 cartucce 16g x3 + adattatore"],
+    ["Leve smontaggio pneumatico"],
+    ["Camera d'aria emergenza","Misura Himalayan"],
+    ["Compressore Xiaomi Air 2"],
+    ["Acqua saponata + guanti monouso"],
+    ["Jump starter (NOCO GB40 o GB20)"],
+    ["Fascette + nastro americano + fil di ferro"],
+    ["Fusibili di ricambio Himalayan"],
+  ]},
+  {l:"Salute & igiene",i:[
+    ["Kit pronto soccorso base"],
+    ["Crema solare alta protezione"],
+    ["Pastiglie Micropur","Purificazione acqua, più compatte del Sawyer Squeeze"],
+  ]},
+  {l:"Organizzazione",i:[
+    ["Dry bag / sacchetti impermeabili","Per elettronica e documenti"],
+    ["Cuscino comprimibile"],
+  ]},
+];
+
+const ck=new Set();
+let tot=0,saveTimer=null;
+const cl=document.getElementById("cl");
+
+D.forEach((s,si)=>{
+  const d=document.createElement("div");
+  d.className="sec";
+  d.innerHTML=`<div class="sh"><b>${s.l}</b><span class="sc" id="c${si}">0/${s.i.length}</span></div>`;
+  s.i.forEach((it,ii)=>{
+    tot++;
+    const id=`${si}_${ii}`;
+    const r=document.createElement("div");
+    r.className="it";r.id="r"+id;
+    r.onclick=()=>tog(id,si,s.i.length);
+    r.innerHTML=`<span class="mk" id="b${id}">[ ]</span><div><div class="lb">${it[0]}</div>${it[1]?`<div class="nt">${it[1]}</div>`:""}</div>`;
+    d.appendChild(r);
+  });
+  cl.appendChild(d);
+});
+
+function updateUI(){
+  const p=Math.round(ck.size/tot*100);
+  document.getElementById("pf").style.width=p+"%";
+  document.getElementById("sum").textContent=ck.size+" di "+tot+" pronti ("+p+"%)";
+  D.forEach((_,si)=>{
+    const c=[...ck].filter(x=>x.startsWith(si+"_")).length;
+    document.getElementById("c"+si).textContent=c+"/"+D[si].i.length;
+  });
+}
+
+function tog(id,si,n){
+  ck.has(id)?ck.delete(id):ck.add(id);
+  const on=ck.has(id);
+  document.getElementById("r"+id).classList.toggle("on",on);
+  document.getElementById("b"+id).textContent=on?"[x]":"[ ]";
+  updateUI();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(save,1200);
+}
+
+function rst(){
+  if(!confirm("Reset tutte le spunte?"))return;
+  ck.clear();
+  document.querySelectorAll(".it").forEach(e=>e.classList.remove("on"));
+  document.querySelectorAll(".mk").forEach(e=>e.textContent="[ ]");
+  updateUI();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(save,500);
+}
+
+function b64encode(str){return btoa(unescape(encodeURIComponent(str)));}
+function b64decode(str){return decodeURIComponent(escape(atob(str)));}
+
+async function save(){
+  if(!tok()){askTok();document.getElementById("status").textContent="serve il token per salvare";return;}
+  document.getElementById("status").textContent="salvataggio…";
+  try{
+    const content=b64encode(JSON.stringify({checked:[...ck],updated:new Date().toISOString()}));
+    let body=JSON.stringify({message:"update checklist",content,sha:SHA});
+    let r=await fetch(API,{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body});
+    if(!r.ok&&(r.status===409||r.status===422)){
+      await refreshSHA();
+      body=JSON.stringify({message:"update checklist",content,sha:SHA});
+      r=await fetch(API,{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body});
+    }
+    if(r.ok){
+      const j=await r.json();
+      SHA=j.content.sha;
+      document.getElementById("status").textContent="salvato "+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    }else if(r.status===401||r.status===403){
+      document.getElementById("status").textContent="token non valido o scaduto";
+      askTok();
+    }else{
+      document.getElementById("status").textContent="errore salvataggio ("+r.status+")";
+    }
+  }catch(e){document.getElementById("status").textContent="offline, dati non salvati";}
+}
+
+async function refreshSHA(){
+  const r=await fetch(API+"?t="+Date.now(),{headers:hdr()});
+  const j=await r.json();
+  SHA=j.sha;
+  return j;
+}
+
+async function load(){
+  try{
+    const j=await refreshSHA();
+    const state=JSON.parse(b64decode(j.content.replace(/\n/g,"")));
+    if(state.checked){
+      state.checked.forEach(id=>{
+        if(!document.getElementById("r"+id))return;
+        ck.add(id);
+        document.getElementById("r"+id).classList.add("on");
+        document.getElementById("b"+id).textContent="[x]";
+      });
+    }
+    updateUI();
+    if(state.updated)document.getElementById("status").textContent="ultimo salvataggio: "+new Date(state.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    if(!tok())askTok();
+  }catch(e){
+    updateUI();
+    document.getElementById("status").textContent="impossibile caricare lo stato";
+  }
+}
+
+load();
+</script>
+</body>
+</html>
