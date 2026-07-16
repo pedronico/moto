@@ -16,40 +16,53 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .pb{height:3px;background:#e0e0de;margin-bottom:1rem;border-radius:2px;overflow:hidden}
 .pf{height:100%;background:#2d9e75;border-radius:2px;transition:width .3s}
 .sec{margin-bottom:.75rem;background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
-.sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de;align-items:center}
-.sh b{font-size:13px;font-weight:500}
-.sc{font-size:12px;color:#999;margin-left:auto}
-.delsec{font-size:14px;color:#ccc;margin-left:8px;cursor:pointer;border:none;background:none}
+.sh{display:flex;padding:.6rem 1rem;background:#f9f9f7;border-bottom:1px solid #e0e0de;align-items:center;gap:4px}
+.sh b{font-size:13px;font-weight:500;flex:1}
+.sc{font-size:12px;color:#999;margin-right:2px}
+.shbtn{font-size:12px;color:#bbb;cursor:pointer;border:none;background:none;padding:2px 4px}
+.shbtn:active{color:#888}
+.delsec{color:#c98a83}
 .it{border-bottom:1px solid #f0f0ee}
 .itrow{display:flex;gap:10px;padding:.55rem 1rem;cursor:pointer;user-select:none;align-items:flex-start}
 .itrow:active{background:#f5f5f3}
 .badge{flex-shrink:0;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:1px;white-space:nowrap;letter-spacing:.02em}
 .b-none{background:#eee;color:#999}
 .b-ok{background:#e1f5ee;color:#1d7d5a}
-.b-test{background:#fdf1dc;color:#9a6b12}
+.b-install{background:#fdf1dc;color:#9a6b12}
+.b-test{background:#f1e6fb;color:#7a3fa0}
 .b-ordered{background:#e3edfb;color:#2b5fad}
 .b-toorder{background:#fde4e1;color:#b3382c}
+.b-incoming{background:#dff5f5;color:#157a7a}
 .it.s-ok .lb{color:#aaa;text-decoration:line-through}
 .it.s-ok{opacity:.55}
 .lb{font-size:14px;line-height:1.4}
 .nt{font-size:12px;color:#aaa;margin-top:1px}
 .lnk{font-size:12px;margin-top:2px}
 .lnk a{color:#2b5fad;word-break:break-all}
+.trk{font-size:12px;margin-top:2px;color:#157a7a}
+.trk a{color:#157a7a}
 .opts{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-wrap:wrap;align-items:center}
 .opts.open{display:flex}
 .op{font-size:11.5px;padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#fafafa;cursor:pointer;color:#555}
 .op:active{transform:scale(.96)}
-.op-ok{color:#1d7d5a}.op-test{color:#9a6b12}.op-ordered{color:#2b5fad}.op-toorder{color:#b3382c}.op-skip{color:#888}.op-clear{color:#bbb}
+.op-ok{color:#1d7d5a}.op-install{color:#9a6b12}.op-test{color:#7a3fa0}.op-ordered{color:#2b5fad}
+.op-toorder{color:#b3382c}.op-incoming{color:#157a7a}.op-skip{color:#888}.op-clear{color:#bbb}
+.op-edit{color:#555}
 .op-del{color:#b3382c;border-color:#eebbb5}
 .op-mv{color:#888;padding:4px 8px}
-.linkbox{display:none;width:100%;margin-top:6px}
-.linkbox.open{display:flex;gap:6px}
-.linkbox input{flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12.5px}
-.linkbox button,.addbox button,#addsec button{padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:12px;cursor:pointer}
+.linkbox,.trackbox{display:none;width:100%;margin-top:6px;gap:6px;flex-direction:column}
+.linkbox.open,.trackbox.open{display:flex}
+.linkbox .row,.trackbox .row{display:flex;gap:6px}
+.linkbox input,.trackbox input{flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:12.5px}
+.linkbox button,.trackbox button,.addbox button,#addsec button,.editbox button{padding:5px 12px;border:1px solid #2d9e75;background:#2d9e75;color:#fff;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
 .addrow{padding:.45rem 1rem;font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
 .addbox{display:none;padding:.4rem 1rem .7rem;gap:6px;flex-direction:column}
 .addbox.open{display:flex}
 .addbox input{padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+.editbox{width:100%;display:flex;flex-direction:column;gap:6px;padding:.5rem 1rem .7rem}
+.editbox input{padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+.editbox .row{display:flex;gap:6px}
+.editbox .cancel{border-color:#ccc;background:#fff;color:#888}
 #addsec{margin-top:.5rem}
 #addsec .addbox{padding:.4rem 0}
 #addseclink{font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
@@ -98,12 +111,13 @@ function saveTok(){
 
 const STATES={
   ok:{label:"OK",badge:"b-ok"},
+  install:{label:"DA INSTALLARE",badge:"b-install"},
   test:{label:"DA TESTARE",badge:"b-test"},
   ordered:{label:"ORDINATO",badge:"b-ordered"},
   toorder:{label:"DA ORDINARE",badge:"b-toorder"},
+  incoming:{label:"IN ARRIVO",badge:"b-incoming"},
 };
 
-// Default structure, used only on first load / migration
 const DEFAULT=[
   {l:"Dormire",items:[
     {t:"DD Frontline Hammock"},
@@ -153,8 +167,8 @@ const DEFAULT=[
   ]},
 ];
 
-let SEC=[]; // live structure: [{l, items:[{t,n,s,link}]}]
-let saveTimer=null,openId=null;
+let SEC=[];
+let saveTimer=null,openId=null,editingId=null;
 
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 
@@ -170,7 +184,7 @@ function render(){
     const d=document.createElement("div");
     d.className="sec";
     let secOk=0,secActive=0;
-    const visItems=[];
+
     sec.items.forEach((it,ii)=>{
       if(it.s==="skip"){
         skipped++;
@@ -182,13 +196,13 @@ function render(){
         skiplist.appendChild(row);
         return;
       }
-      visItems.push(ii);
       active++;secActive++;
       if(it.s==="ok"){okCount++;secOk++;}
     });
 
-    const emptyDel=sec.items.length===0?`<button class="delsec" onclick="delSection(${si})" title="Elimina categoria">✕</button>`:"";
-    d.innerHTML=`<div class="sh"><b>${esc(sec.l)}</b><span class="sc">${secActive?secOk+"/"+secActive:"—"}</span>${emptyDel}</div>`;
+    const upBtn=si>0?`<button class="shbtn" onclick="moveSection(${si},-1)" title="Sposta su">↑</button>`:"";
+    const dnBtn=si<SEC.length-1?`<button class="shbtn" onclick="moveSection(${si},1)" title="Sposta giù">↓</button>`:"";
+    d.innerHTML=`<div class="sh"><b>${esc(sec.l)}</b><span class="sc">${secActive?secOk+"/"+secActive:"—"}</span>${upBtn}${dnBtn}<button class="shbtn delsec" onclick="delSection(${si})" title="Elimina categoria">✕</button></div>`;
 
     sec.items.forEach((it,ii)=>{
       if(it.s==="skip")return;
@@ -196,36 +210,68 @@ function render(){
       const st=it.s;
       const w=document.createElement("div");
       w.className="it"+(st==="ok"?" s-ok":"");
+
+      if(editingId===id){
+        w.innerHTML=`<div class="editbox">
+  <input id="et${id}" placeholder="nome voce" value="${esc(it.t)}">
+  <input id="en${id}" placeholder="nota (opzionale)" value="${esc(it.n||'')}">
+  <div class="row">
+    <button onclick="saveEdit(${si},${ii})">Salva</button>
+    <button class="cancel" onclick="cancelEdit()">Annulla</button>
+  </div>
+</div>`;
+        d.appendChild(w);
+        return;
+      }
+
       const badge=st&&STATES[st]?`<span class="badge ${STATES[st].badge}">${STATES[st].label}</span>`:`<span class="badge b-none">—</span>`;
       const link=(it.link&&st==="toorder")?`<div class="lnk"><a href="${esc(it.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(it.link)}</a></div>`:"";
+      let trackHtml="";
+      if(st==="incoming"&&it.track&&(it.track.num||it.track.link)){
+        const numTxt=it.track.num?esc(it.track.num):"tracking";
+        trackHtml=it.track.link?`<div class="trk">📦 <a href="${esc(it.track.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${numTxt}</a></div>`:`<div class="trk">📦 ${numTxt}</div>`;
+      }
       w.innerHTML=`
 <div class="itrow" onclick="toggleOpts('${id}')">
   ${badge}
   <div style="flex:1">
     <div class="lb">${esc(it.t)}</div>
     ${it.n?`<div class="nt">${esc(it.n)}</div>`:""}
-    ${link}
+    ${link}${trackHtml}
   </div>
 </div>
 <div class="opts${openId===id?' open':''}" id="op${id}">
   <span class="op op-ok" onclick="setState(${si},${ii},'ok',event)">OK</span>
-  <span class="op op-test" onclick="setState(${si},${ii},'test',event)">Da installare/testare</span>
+  <span class="op op-install" onclick="setState(${si},${ii},'install',event)">Da installare</span>
+  <span class="op op-test" onclick="setState(${si},${ii},'test',event)">Da testare</span>
   <span class="op op-ordered" onclick="setState(${si},${ii},'ordered',event)">Ordinato</span>
   <span class="op op-toorder" onclick="setState(${si},${ii},'toorder',event)">Da ordinare</span>
+  <span class="op op-incoming" onclick="setState(${si},${ii},'incoming',event)">In arrivo</span>
   <span class="op op-skip" onclick="setState(${si},${ii},'skip',event)">Non più necessario</span>
   <span class="op op-clear" onclick="setState(${si},${ii},null,event)">Azzera</span>
+  <span class="op op-edit" onclick="startEdit('${id}',event)">✎ Modifica</span>
   <span class="op op-mv" onclick="move(${si},${ii},-1,event)" title="Sposta su">↑</span>
   <span class="op op-mv" onclick="move(${si},${ii},1,event)" title="Sposta giù">↓</span>
   <span class="op op-del" onclick="delItem(${si},${ii},event)">Elimina</span>
   <div class="linkbox${(st==='toorder')?' open':''}" id="lb${id}">
-    <input type="url" id="li${id}" placeholder="link prodotto (opzionale)" value="${esc(it.link||'')}">
-    <button onclick="saveLink(${si},${ii},event)">Salva</button>
+    <div class="row">
+      <input type="url" id="li${id}" placeholder="link prodotto (opzionale)" value="${esc(it.link||'')}">
+      <button onclick="saveLink(${si},${ii},event)">Salva</button>
+    </div>
+  </div>
+  <div class="trackbox${(st==='incoming')?' open':''}" id="tb${id}">
+    <div class="row">
+      <input type="text" id="tn${id}" placeholder="numero tracking" value="${esc((it.track&&it.track.num)||'')}">
+    </div>
+    <div class="row">
+      <input type="url" id="tl${id}" placeholder="link tracking (opzionale)" value="${esc((it.track&&it.track.link)||'')}">
+      <button onclick="saveTrack(${si},${ii},event)">Salva</button>
+    </div>
   </div>
 </div>`;
       d.appendChild(w);
     });
 
-    // add-item row
     const ar=document.createElement("div");
     ar.innerHTML=`<div class="addrow" onclick="toggleAdd(${si})">+ aggiungi voce</div>
 <div class="addbox" id="ab${si}">
@@ -244,21 +290,49 @@ function render(){
 }
 
 function toggleOpts(id){
+  if(editingId)return;
   openId=(openId===id)?null:id;
   render();
+}
+
+function startEdit(id,ev){
+  ev.stopPropagation();
+  editingId=id;
+  openId=null;
+  render();
+  const inp=document.getElementById("et"+id);
+  if(inp){inp.focus();inp.select();}
+}
+
+function cancelEdit(){
+  editingId=null;
+  render();
+}
+
+function saveEdit(si,ii){
+  const t=document.getElementById("et"+si+"_"+ii).value.trim();
+  const n=document.getElementById("en"+si+"_"+ii).value.trim();
+  if(!t)return;
+  SEC[si].items[ii].t=t;
+  if(n)SEC[si].items[ii].n=n;else delete SEC[si].items[ii].n;
+  editingId=null;
+  render();
+  scheduleSave();
 }
 
 function setState(si,ii,s,ev){
   ev.stopPropagation();
   const it=SEC[si].items[ii];
-  if(s===null){delete it.s;delete it.link;openId=null;}
+  if(s===null){delete it.s;delete it.link;delete it.track;openId=null;}
   else{
     it.s=s;
-    if(s!=="toorder"){delete it.link;openId=null;}
-    // keep panel open for toorder so link input is visible
+    if(s!=="toorder")delete it.link;
+    if(s!=="incoming")delete it.track;
+    if(s!=="toorder"&&s!=="incoming")openId=null;
   }
   render();
   if(s==="toorder"){const li=document.getElementById("li"+si+"_"+ii);if(li)li.focus();}
+  if(s==="incoming"){const tn=document.getElementById("tn"+si+"_"+ii);if(tn)tn.focus();}
   scheduleSave();
 }
 
@@ -272,6 +346,17 @@ function saveLink(si,ii,ev){
   scheduleSave();
 }
 
+function saveTrack(si,ii,ev){
+  ev.stopPropagation();
+  const num=document.getElementById("tn"+si+"_"+ii).value.trim();
+  const link=document.getElementById("tl"+si+"_"+ii).value.trim();
+  const it=SEC[si].items[ii];
+  if(num||link)it.track={num,link};else delete it.track;
+  openId=null;
+  render();
+  scheduleSave();
+}
+
 function move(si,ii,dir,ev){
   ev.stopPropagation();
   const arr=SEC[si].items;
@@ -279,6 +364,14 @@ function move(si,ii,dir,ev){
   if(j<0||j>=arr.length)return;
   [arr[ii],arr[j]]=[arr[j],arr[ii]];
   openId=si+"_"+j;
+  render();
+  scheduleSave();
+}
+
+function moveSection(si,dir){
+  const j=si+dir;
+  if(j<0||j>=SEC.length)return;
+  [SEC[si],SEC[j]]=[SEC[j],SEC[si]];
   render();
   scheduleSave();
 }
@@ -325,8 +418,9 @@ function addSection(){
 }
 
 function delSection(si){
-  if(SEC[si].items.length>0)return;
-  if(!confirm('Eliminare la categoria "'+SEC[si].l+'"?'))return;
+  const n=SEC[si].items.length;
+  const msg=n>0?`Eliminare la categoria "${SEC[si].l}" e le sue ${n} voci?`:`Eliminare la categoria "${SEC[si].l}"?`;
+  if(!confirm(msg))return;
   SEC.splice(si,1);
   render();
   scheduleSave();
@@ -334,7 +428,7 @@ function delSection(si){
 
 function rst(){
   if(!confirm("Reset: azzera tutti gli stati (le voci restano)?"))return;
-  SEC.forEach(s=>s.items.forEach(it=>{delete it.s;delete it.link;}));
+  SEC.forEach(s=>s.items.forEach(it=>{delete it.s;delete it.link;delete it.track;}));
   render();
   scheduleSave();
 }
@@ -377,9 +471,7 @@ async function refreshSHA(){
 }
 
 function migrate(state){
-  // Newest format
   if(state.sections)return state.sections;
-  // items format {id:{s,link}} -> merge into DEFAULT
   const sec=JSON.parse(JSON.stringify(DEFAULT));
   if(state.items){
     Object.entries(state.items).forEach(([id,v])=>{
