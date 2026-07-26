@@ -138,12 +138,19 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 #nt-icon{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:center;justify-content:center;padding:20px}
 #nt-icon.open{display:flex}
 #nt-iconprev{width:130px;height:130px;border-radius:26px;border:1px solid #e0e0de;background:#f5f5f3}
+#nt-pat{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:center;justify-content:center;padding:20px}
+#nt-pat.open{display:flex}
+#nt-pat textarea{width:100%;font-size:12px;font-family:ui-monospace,monospace;padding:8px;border:1px solid #ccc;border-radius:8px;word-break:break-all;resize:none;min-height:72px}
+#nt-pat .prow{display:flex;gap:8px;margin-top:10px}
+#nt-pat .prow button{flex:1;padding:9px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #2d9e75;background:#2d9e75;color:#fff}
+#nt-pat .prow button.sec{background:#fff;color:#555;border-color:#ccc}
+#pat-msg{font-size:12px;color:#1d7d5a;margin-top:8px;min-height:16px}
 .ic-card{background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;font-size:14px;line-height:1.55}
 .ic-card h3{font-size:15px;margin-bottom:10px}
 .ic-card .ov-close{margin-top:16px;width:100%;background:#2d9e75;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer}
 @media print{
   body{background:#fff;padding:0;color:#000}
-  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#nt-icon,#view-checklist{display:none!important}
+  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#nt-icon,#nt-pat,#view-checklist{display:none!important}
   .nch .shbtn{display:none!important}
   #view-notes{display:block!important}
   #nt-printhead{display:block;font-size:18px;font-weight:600;margin:0 0 14px;padding:0}
@@ -176,6 +183,7 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
     <button class="rb" onclick="NT.print()">🖨 Stampa</button>
     <button class="rb" onclick="NT.backup()">☁ Backup</button>
     <button class="rb" onclick="NT.restore()">⟲ Ripristina</button>
+    <button class="rb" onclick="NT.showPat()">🔑 PAT</button>
   </div>
   <div id="nt-printhead"></div>
   <div id="nt-list"></div>
@@ -222,6 +230,12 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
   </div>
 </div></div>
 <input type="file" id="nt-iconfile" accept="image/*" style="display:none">
+<div id="nt-pat"><div class="ic-card">
+  <h3>🔑 PAT moto</h3>
+  <div id="pat-body"></div>
+  <div id="pat-msg"></div>
+  <button style="margin-top:14px;width:100%;padding:10px;background:#fff;border:1px solid #ccc;border-radius:8px;cursor:pointer" onclick="NT.closePat()">Chiudi</button>
+</div></div>
 <script>
 document.querySelector('.tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
@@ -467,6 +481,24 @@ A.iconSave=async()=>{
     showInstall('<h3>✅ Icona aggiornata</h3><div>Per vederla: rimuovi l\'app dalla schermata Home e riaggiungila (Condividi → Aggiungi a Home). Il sito può metterci 1-2 minuti a propagare.</div>');
   }catch(e){setStatus('offline: icona non salvata');}
 };
+function patMsg(m){const e=document.getElementById('pat-msg');e.textContent=m;clearTimeout(patMsg._t);patMsg._t=setTimeout(()=>{e.textContent='';},2500);}
+function renderPat(){
+  const t=tok();const body=document.getElementById('pat-body');
+  if(t){
+    body.innerHTML='<div style="font-size:12px;color:#888;margin-bottom:8px">Token salvato su questo dispositivo, visibile anche offline:</div>'+
+      '<textarea id="pat-view" readonly onclick="this.select()">'+esc(t)+'</textarea>'+
+      '<div class="prow"><button onclick="NT.copyPat()">Copia</button><button class="sec" onclick="NT.editPat()">Sostituisci</button></div>';
+  }else{
+    body.innerHTML='<div style="font-size:12px;color:#888;margin-bottom:8px">Nessun token su questo dispositivo. Incollalo qui per salvarlo (serve per Backup e Icona):</div>'+
+      '<textarea id="pat-new" placeholder="github_pat_..."></textarea>'+
+      '<div class="prow"><button onclick="NT.savePat()">Salva token</button></div>';
+  }
+}
+A.showPat=()=>{renderPat();document.getElementById('pat-msg').textContent='';document.getElementById('nt-pat').classList.add('open');};
+A.closePat=()=>document.getElementById('nt-pat').classList.remove('open');
+A.copyPat=async()=>{const t=tok();try{await navigator.clipboard.writeText(t);patMsg('copiato ✓');}catch(e){const ta=document.getElementById('pat-view');if(ta){ta.select();try{document.execCommand('copy');patMsg('copiato ✓');}catch(_){patMsg('selezionalo e copia a mano');}}}};
+A.editPat=()=>{document.getElementById('pat-body').innerHTML='<textarea id="pat-new" placeholder="github_pat_...">'+esc(tok())+'</textarea><div class="prow"><button onclick="NT.savePat()">Salva</button><button class="sec" onclick="NT.showPat()">Annulla</button></div>';};
+A.savePat=()=>{const el=document.getElementById('pat-new');const v=el?el.value.trim():'';if(!v){patMsg('vuoto');return;}localStorage.setItem('gh_token',v);renderPat();patMsg('salvato ✓');};
 init();
 return A;
 })();
