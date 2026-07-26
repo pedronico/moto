@@ -163,6 +163,10 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
   .nmap{border:1px solid #999;color:#000}
   a{color:#000;text-decoration:none}
 }
+#ro-bar{display:none;justify-content:space-between;align-items:center;background:#eef4ff;border:1px solid #d5e3fb;border-radius:8px;padding:.5rem .7rem;margin-bottom:1rem;font-size:12.5px;color:#3a5a8a}
+body.readonly #ro-bar{display:flex}
+body.readonly .nactions,body.readonly #nt-addcat,body.readonly .naddrow,body.readonly .niopts,body.readonly .ndrag,body.readonly .nch .shbtn,body.readonly .nt-tokbar,body.readonly #tokbar,body.readonly #addsec,body.readonly .opts,body.readonly .sh .shbtn,body.readonly .addrow,body.readonly .addbox,body.readonly #skipwrap,body.readonly .top>span:last-child,body.readonly #nt-overlay .ov-del{display:none!important}
+body.readonly .nirow,body.readonly .itrow{cursor:default}
 </style>
 </head>
 <body>
@@ -171,6 +175,7 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
   <button class="tab active" data-tab="notes">Note viaggio</button>
   <button class="tab" data-tab="checklist">Checklist</button>
 </div>
+<div id="ro-bar"><span>👁 Sola lettura</span><span><button class="rb" onclick="roRefresh()">🔄 Aggiorna</button><button class="rb" onclick="NT.print()">🖨 Stampa</button></span></div>
 <div id="view-notes" class="view active">
   <div class="nt-tokbar" id="nt-tokbar">
     Per il backup su GitHub serve il token (una volta sola, resta su questo dispositivo):
@@ -239,6 +244,12 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
   <button style="margin-top:14px;width:100%;padding:10px;background:#fff;border:1px solid #ccc;border-radius:8px;cursor:pointer" onclick="NT.closePat()">Chiudi</button>
 </div></div>
 <script>
+(function(){var h=location.href;
+  if(/[?#&]edit\b/.test(h))localStorage.removeItem('nt_readonly');
+  if(/[?#&]view\b/.test(h))localStorage.setItem('nt_readonly','1');
+  if(localStorage.getItem('nt_readonly')==='1')document.body.classList.add('readonly');
+})();
+function roRefresh(){try{if(window.NT&&NT.refresh)NT.refresh();}catch(e){}try{if(typeof load==='function')load();}catch(e){}}
 document.querySelector('.tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===b));
@@ -280,6 +291,7 @@ const SEED={categories:[
 let CATS=[], updated=null, lastBackup=null;
 let openItem=null, editItem=null, editType=null, addForm=null;
 let photoTarget=null, overlayRef=null, saveTimer=null, sha=null;
+const RO=document.body.classList.contains('readonly');
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
 function tok(){return localStorage.getItem('gh_token')||'';}
 function b64e(str){return btoa(unescape(encodeURIComponent(str)));}
@@ -423,6 +435,14 @@ async function fetchRemote(){
 }
 function normalize(cats){return (cats||[]).map(c=>({id:c.id||cid(),label:c.label||'Senza nome',collapsed:!!c.collapsed,items:(c.items||[]).map(it=>({id:it.id||cid(),type:it.type||'note',title:it.title||'',value:it.value||'',text:it.text||it.n||'',photos:it.photos||[]}))}));}
 async function init(){
+  if(RO){
+    setStatus('👁 sola lettura · aggiornamento…');
+    const remote=await fetchRemote();
+    if(remote&&remote.categories){CATS=normalize(remote.categories);lastBackup=remote.lastBackup||remote.updated||null;idbSet({categories:CATS,updated:remote.updated,lastBackup});}
+    else{const local=await idbGet();CATS=local&&local.categories?normalize(local.categories):normalize(SEED.categories);}
+    render();setStatus('👁 sola lettura'+(navigator.onLine?'':' · offline (copia locale)'));
+    return;
+  }
   const local=await idbGet();
   if(local&&local.categories&&local.categories.length){CATS=normalize(local.categories);updated=local.updated;lastBackup=local.lastBackup||null;render();stamp();return;}
   setStatus('primo avvio, controllo backup…');
@@ -431,6 +451,7 @@ async function init(){
   else CATS=normalize(SEED.categories);
   render();persist();
 }
+A.refresh=async()=>{setStatus('👁 aggiornamento…');const r=await fetchRemote();if(r&&r.categories){CATS=normalize(r.categories);lastBackup=r.lastBackup||r.updated||null;idbSet({categories:CATS,updated:r.updated,lastBackup});render();setStatus('👁 sola lettura · aggiornato');}else setStatus('👁 sola lettura · offline');};
 let deferredPrompt=null, printRestore=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
 A.print=()=>{
@@ -629,7 +650,7 @@ async function load(){
     try{localStorage.setItem('cl_cache',JSON.stringify(state));}catch(e){}
     render();
     if(state.updated)document.getElementById("status").textContent="ultimo salvataggio: "+new Date(state.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    if(!tok())askTok();
+    if(!tok()&&!document.body.classList.contains('readonly'))askTok();
   }catch(e){
     const c=localStorage.getItem('cl_cache');
     if(c){try{SEC=migrate(JSON.parse(c));render();document.getElementById("status").textContent="offline (copia locale)";return;}catch(_){}}
