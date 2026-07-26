@@ -130,6 +130,28 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 #nt-overlay button{font-size:13px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer}
 .ov-close{background:#fff;color:#333}
 .ov-del{background:#b3382c;color:#fff}
+.nactions{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+.nactions .rb{margin-left:0}
+#nt-printhead{display:none}
+#nt-install{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:center;justify-content:center;padding:20px}
+#nt-install.open{display:flex}
+.ic-card{background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;font-size:14px;line-height:1.55}
+.ic-card h3{font-size:15px;margin-bottom:10px}
+.ic-card .ov-close{margin-top:16px;width:100%;background:#2d9e75;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer}
+@media print{
+  body{background:#fff;padding:0;color:#000}
+  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#view-checklist{display:none!important}
+  .nch .shbtn{display:none!important}
+  #view-notes{display:block!important}
+  #nt-printhead{display:block;font-size:18px;font-weight:600;margin:0 0 14px;padding:0}
+  .ncat{border:none;box-shadow:none;margin-bottom:10px;break-inside:avoid}
+  .nch{background:#f0f0ee;border:none;padding:4px 6px}
+  .nctitle{cursor:auto}
+  .nitem{break-inside:avoid;border-bottom:1px solid #ddd}
+  .nthumb{width:auto;max-width:70mm;max-height:90mm;height:auto;object-fit:contain}
+  .nmap{border:1px solid #999;color:#000}
+  a{color:#000;text-decoration:none}
+}
 </style>
 </head>
 <body>
@@ -144,13 +166,14 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
     <input type="password" id="nt-tok" placeholder="github_pat_...">
     <button onclick="NT.saveTok()">Salva token</button>
   </div>
-  <div class="nbar">
-    <span id="nt-status">Caricamento…</span>
-    <span style="flex-shrink:0">
-      <button class="rb" onclick="NT.backup()">☁ Backup</button>
-      <button class="rb" onclick="NT.restore()">⟲ Ripristina</button>
-    </span>
+  <div class="nbar"><span id="nt-status">Caricamento…</span></div>
+  <div class="nactions">
+    <button class="rb" onclick="NT.install()">📲 Installa</button>
+    <button class="rb" onclick="NT.print()">🖨 Stampa</button>
+    <button class="rb" onclick="NT.backup()">☁ Backup</button>
+    <button class="rb" onclick="NT.restore()">⟲ Ripristina</button>
   </div>
+  <div id="nt-printhead"></div>
   <div id="nt-list"></div>
   <div id="nt-addcat">
     <span id="nt-addcatlink" onclick="NT.toggleAddCat()">+ nuova categoria</span>
@@ -183,6 +206,7 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 </div>
 <input type="file" id="nt-file" accept="image/*" multiple style="display:none">
 <div id="nt-overlay"><img id="nt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="NT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="NT.delPhoto()">Elimina foto</button></div></div>
+<div id="nt-install"><div class="ic-card"><div id="ic-body"></div><button class="ov-close" onclick="NT.closeInstall()">Ok</button></div></div>
 <script>
 document.querySelector('.tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
@@ -375,6 +399,31 @@ async function init(){
   else CATS=normalize(SEED.categories);
   render();persist();
 }
+let deferredPrompt=null, printRestore=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+A.print=()=>{
+  const saved=CATS.map(c=>c.collapsed);CATS.forEach(c=>c.collapsed=false);
+  const s={o:openItem,e:editItem,a:addForm};openItem=null;editItem=null;addForm=null;
+  document.getElementById('nt-printhead').textContent='Note viaggio · '+new Date().toLocaleDateString('it-IT');
+  render();
+  printRestore=()=>{CATS.forEach((c,i)=>c.collapsed=saved[i]);openItem=s.o;editItem=s.e;addForm=s.a;printRestore=null;render();};
+  setTimeout(()=>{window.print();setTimeout(()=>{if(printRestore)printRestore();},5000);},60);
+};
+window.addEventListener('afterprint',()=>{if(printRestore)printRestore();});
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+function shareSvg(){return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2b5fad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/></svg>';}
+function showInstall(html){document.getElementById('ic-body').innerHTML=html;document.getElementById('nt-install').classList.add('open');}
+A.closeInstall=()=>document.getElementById('nt-install').classList.remove('open');
+A.install=async()=>{
+  if(standalone()){showInstall('<h3>App già installata</h3><div>Stai già usando la versione installata, tutto ok.</div>');return;}
+  if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice;}catch(e){}deferredPrompt=null;return;}
+  if(isIOS()){
+    showInstall('<h3>📲 Aggiungi a Home (iPhone)</h3><div>1. In Safari tocca <b>Condividi</b> '+shareSvg()+'<br>2. Scorri e tocca <b>Aggiungi alla schermata Home</b>.<br>3. Conferma con <b>Aggiungi</b>.<br><br>Comparirà l\'icona come una vera app e si aprirà anche offline.</div>');
+  }else{
+    showInstall('<h3>📲 Installa app</h3><div>Apri il menu del browser (i tre puntini) e scegli <b>Installa app</b> oppure <b>Aggiungi a schermata Home</b>.</div>');
+  }
+};
 init();
 return A;
 })();
