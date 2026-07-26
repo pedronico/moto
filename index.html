@@ -135,12 +135,15 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 #nt-printhead{display:none}
 #nt-install{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:center;justify-content:center;padding:20px}
 #nt-install.open{display:flex}
+#nt-icon{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:center;justify-content:center;padding:20px}
+#nt-icon.open{display:flex}
+#nt-iconprev{width:130px;height:130px;border-radius:26px;border:1px solid #e0e0de;background:#f5f5f3}
 .ic-card{background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;font-size:14px;line-height:1.55}
 .ic-card h3{font-size:15px;margin-bottom:10px}
 .ic-card .ov-close{margin-top:16px;width:100%;background:#2d9e75;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer}
 @media print{
   body{background:#fff;padding:0;color:#000}
-  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#view-checklist{display:none!important}
+  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#nt-icon,#view-checklist{display:none!important}
   .nch .shbtn{display:none!important}
   #view-notes{display:block!important}
   #nt-printhead{display:block;font-size:18px;font-weight:600;margin:0 0 14px;padding:0}
@@ -169,6 +172,7 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
   <div class="nbar"><span id="nt-status">Caricamento…</span></div>
   <div class="nactions">
     <button class="rb" onclick="NT.install()">📲 Installa</button>
+    <button class="rb" onclick="NT.iconEdit()">🎨 Icona</button>
     <button class="rb" onclick="NT.print()">🖨 Stampa</button>
     <button class="rb" onclick="NT.backup()">☁ Backup</button>
     <button class="rb" onclick="NT.restore()">⟲ Ripristina</button>
@@ -207,6 +211,17 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 <input type="file" id="nt-file" accept="image/*" multiple style="display:none">
 <div id="nt-overlay"><img id="nt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="NT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="NT.delPhoto()">Elimina foto</button></div></div>
 <div id="nt-install"><div class="ic-card"><div id="ic-body"></div><button class="ov-close" onclick="NT.closeInstall()">Ok</button></div></div>
+<div id="nt-icon"><div class="ic-card">
+  <h3>🎨 Icona app</h3>
+  <div style="text-align:center"><canvas id="nt-iconprev" width="160" height="160"></canvas></div>
+  <div style="text-align:center"><button class="rb" style="margin:12px 0 0" onclick="document.getElementById('nt-iconfile').click()">Scegli immagine…</button></div>
+  <div style="font-size:12px;color:#888;margin-top:10px">Viene ritagliata quadrata e usata come icona quando aggiungi l'app alla schermata Home. Serve il token GitHub. Dopo il salvataggio, rimuovi e riaggiungi l'app per vedere l'icona nuova.</div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button style="flex:1;padding:10px;background:#2d9e75;color:#fff;border:none;border-radius:8px;cursor:pointer" onclick="NT.iconSave()">Salva icona</button>
+    <button style="flex:1;padding:10px;background:#fff;color:#555;border:1px solid #ccc;border-radius:8px;cursor:pointer" onclick="NT.closeIcon()">Annulla</button>
+  </div>
+</div></div>
+<input type="file" id="nt-iconfile" accept="image/*" style="display:none">
 <script>
 document.querySelector('.tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
@@ -423,6 +438,34 @@ A.install=async()=>{
   }else{
     showInstall('<h3>📲 Installa app</h3><div>Apri il menu del browser (i tre puntini) e scegli <b>Installa app</b> oppure <b>Aggiungi a schermata Home</b>.</div>');
   }
+};
+let iconImg=null;
+function drawCover(ctx,img,size){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,size,size);const s=Math.min(img.width,img.height);const sx=(img.width-s)/2,sy=(img.height-s)/2;ctx.drawImage(img,sx,sy,s,s,0,0,size,size);}
+document.getElementById('nt-iconfile').addEventListener('change',function(){
+  if(!this.files.length)return;
+  const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{iconImg=im;const c=document.getElementById('nt-iconprev');drawCover(c.getContext('2d'),im,c.width);};im.src=fr.result;};fr.readAsDataURL(this.files[0]);this.value='';
+});
+A.iconEdit=()=>{iconImg=null;const c=document.getElementById('nt-iconprev');c.getContext('2d').clearRect(0,0,c.width,c.height);document.getElementById('nt-icon').classList.add('open');};
+A.closeIcon=()=>document.getElementById('nt-icon').classList.remove('open');
+A.iconSave=async()=>{
+  if(!iconImg){alert('Scegli prima un\'immagine');return;}
+  if(!tok()){A.closeIcon();document.getElementById('nt-tokbar').style.display='block';setStatus('serve il token per salvare l\'icona');return;}
+  setStatus('salvo icona…');
+  const sizes={'icon-180.png':180,'icon-192.png':192,'icon-512.png':512};
+  try{
+    for(const name in sizes){
+      const sz=sizes[name];const c=document.createElement('canvas');c.width=sz;c.height=sz;
+      drawCover(c.getContext('2d'),iconImg,sz);
+      const b64=c.toDataURL('image/png').split(',')[1];
+      let s=null;
+      try{const g=await fetch('https://api.github.com/repos/'+REPO+'/contents/'+name+'?t='+Date.now(),{headers:hdr()});if(g.ok)s=(await g.json()).sha;}catch(e){}
+      const body=JSON.stringify({message:'update '+name,content:b64,sha:s||undefined});
+      const r=await fetch('https://api.github.com/repos/'+REPO+'/contents/'+name,{method:'PUT',headers:{...hdr(),'Content-Type':'application/json'},body});
+      if(!r.ok){if(r.status===401||r.status===403){setStatus('token non valido');document.getElementById('nt-tokbar').style.display='block';}else setStatus('errore icona '+name+' ('+r.status+')');return;}
+    }
+    A.closeIcon();setStatus('icona aggiornata');
+    showInstall('<h3>✅ Icona aggiornata</h3><div>Per vederla: rimuovi l\'app dalla schermata Home e riaggiungila (Condividi → Aggiungi a Home). Il sito può metterci 1-2 minuti a propagare.</div>');
+  }catch(e){setStatus('offline: icona non salvata');}
 };
 init();
 return A;
