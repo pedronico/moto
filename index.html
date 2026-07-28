@@ -151,7 +151,7 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .ic-card .ov-close{margin-top:16px;width:100%;background:#2d9e75;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer}
 @media print{
   body{background:#fff;padding:0;color:#000}
-  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#nt-icon,#nt-pat,#view-checklist{display:none!important}
+  .tabs,.nbar,.nactions,.nt-tokbar,#nt-addcat,.niopts,.naddrow,.ndrag,.nccount,#nt-overlay,#nt-install,#nt-icon,#nt-pat,#view-checklist,#view-quotes{display:none!important}
   .nch .shbtn{display:none!important}
   #view-notes{display:block!important}
   #nt-printhead{display:block;font-size:18px;font-weight:600;margin:0 0 14px;padding:0}
@@ -166,7 +166,27 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 #ro-bar{display:none;justify-content:space-between;align-items:center;background:#eef4ff;border:1px solid #d5e3fb;border-radius:8px;padding:.5rem .7rem;margin-bottom:1rem;font-size:12.5px;color:#3a5a8a}
 body.readonly #ro-bar{display:flex}
 body.readonly .nactions,body.readonly #nt-addcat,body.readonly .naddrow,body.readonly .niopts,body.readonly .ndrag,body.readonly .nch .shbtn,body.readonly .nt-tokbar,body.readonly #tokbar,body.readonly #addsec,body.readonly .opts,body.readonly .sh .shbtn,body.readonly .addrow,body.readonly .addbox,body.readonly #skipwrap,body.readonly .top>span:last-child,body.readonly #nt-overlay .ov-del{display:none!important}
-body.readonly .nirow,body.readonly .itrow{cursor:default}
+body.readonly .nirow,body.readonly .itrow,body.readonly .qhead{cursor:default}
+body.readonly #qt-add,body.readonly .qopts{display:none!important}
+.qcard{margin-bottom:.6rem;background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
+.qhead{display:flex;gap:9px;align-items:flex-start;padding:.7rem 1rem;cursor:pointer;user-select:none}
+.qhead:active{background:#f5f5f3}
+.qcar{flex-shrink:0;font-size:10px;color:#bbb;margin-top:4px;transition:transform .2s}
+.qcard.open .qcar{transform:rotate(90deg)}
+.qhbody{flex:1;min-width:0}
+.qbook{font-size:14px;font-weight:600;line-height:1.35}
+.qmeta{font-size:12px;color:#999;margin-top:2px}
+.qbody{display:none;padding:.1rem 1rem .9rem;font-size:14px;line-height:1.6;color:#333}
+.qcard.open .qbody{display:block}
+.qbody p{margin:0 0 .6rem}
+.qbody p:last-child{margin-bottom:0}
+.qopts{display:none;gap:6px;flex-wrap:wrap;padding:0 1rem .7rem}
+.qcard.open .qopts{display:flex}
+#qt-add{margin-top:.5rem}
+#qt-addlink{font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
+#qt-addbox textarea,.qeditbox textarea{padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13.5px;min-height:130px;font-family:inherit;line-height:1.5;resize:vertical;width:100%}
+#qt-status{font-size:13px;color:#888}
+.qempty{font-size:13px;color:#aaa;padding:.4rem 0}
 </style>
 </head>
 <body>
@@ -174,6 +194,7 @@ body.readonly .nirow,body.readonly .itrow{cursor:default}
 <div class="tabs">
   <button class="tab active" data-tab="notes">Note viaggio</button>
   <button class="tab" data-tab="checklist">Checklist</button>
+  <button class="tab" data-tab="quotes">Parole</button>
 </div>
 <div id="ro-bar"><span>👁 Sola lettura</span><span><button class="rb" onclick="roRefresh()">🔄 Aggiorna</button><button class="rb" onclick="NT.print()">🖨 Stampa</button></span></div>
 <div id="view-notes" class="view active">
@@ -221,6 +242,21 @@ body.readonly .nirow,body.readonly .itrow{cursor:default}
   <div id="skipwrap"><h2>Non più necessari</h2><div id="skiplist"></div></div>
   <div id="status"></div>
 </div>
+<div id="view-quotes" class="view">
+  <h1>Parole da ricordare</h1>
+  <div class="top"><span id="qt-status">Caricamento…</span><span><button class="rb" onclick="QT.reload()">🔄 Aggiorna</button></span></div>
+  <div id="qt-list"></div>
+  <div id="qt-add">
+    <span id="qt-addlink" onclick="QT.toggleAdd()">+ aggiungi citazione</span>
+    <div class="addbox" id="qt-addbox">
+      <input id="qt-book" placeholder="libro / titolo">
+      <input id="qt-sub" placeholder="sottotitolo o capitolo (opzionale)">
+      <input id="qt-pages" placeholder="pagine (opzionale)">
+      <textarea id="qt-text" placeholder="testo della citazione"></textarea>
+      <button onclick="QT.add()">Aggiungi</button>
+    </div>
+  </div>
+</div>
 </div>
 <input type="file" id="nt-file" accept="image/*" multiple style="display:none">
 <div id="nt-overlay"><img id="nt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="NT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="NT.delPhoto()">Elimina foto</button></div></div>
@@ -249,13 +285,14 @@ body.readonly .nirow,body.readonly .itrow{cursor:default}
   if(/[?#&]view\b/.test(h))localStorage.setItem('nt_readonly','1');
   if(localStorage.getItem('nt_readonly')==='1')document.body.classList.add('readonly');
 })();
-function roRefresh(){try{if(window.NT&&NT.refresh)NT.refresh();}catch(e){}try{if(typeof load==='function')load();}catch(e){}}
+function roRefresh(){try{if(window.NT&&NT.refresh)NT.refresh();}catch(e){}try{if(typeof load==='function')load();}catch(e){}try{if(window.QT&&QT.refresh)QT.refresh();}catch(e){}}
 document.querySelector('.tabs').addEventListener('click',e=>{
   const b=e.target.closest('.tab'); if(!b)return;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===b));
   const name=b.dataset.tab;
   document.getElementById('view-notes').classList.toggle('active',name==='notes');
   document.getElementById('view-checklist').classList.toggle('active',name==='checklist');
+  document.getElementById('view-quotes').classList.toggle('active',name==='quotes');
   window.scrollTo(0,0);
 });
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
@@ -658,6 +695,99 @@ async function load(){
   }
 }
 load();
+</script>
+<script>
+/* PAROLE DA RICORDARE — citazioni, file citazioni.json su GitHub (stesso schema della checklist) */
+const QT=(function(){
+const REPO='pedronico/moto', FILE='citazioni.json';
+const APIQ='https://api.github.com/repos/'+REPO+'/contents/'+FILE;
+const RO=document.body.classList.contains('readonly');
+let SHA=null, LIST=[], openId=null, editId=null, saveTimer=null;
+function qid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function qesc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+function qtok(){return localStorage.getItem('gh_token')||'';}
+function qhdr(){const h={'Accept':'application/vnd.github+json'};const t=qtok();if(t)h['Authorization']='Bearer '+t;return h;}
+function qe(str){return btoa(unescape(encodeURIComponent(str)));}
+function qd(str){return decodeURIComponent(escape(atob(str)));}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function st(t){const e=document.getElementById('qt-status');if(e)e.textContent=t;}
+const SEED=[
+  {id:qid(),book:"L'arte di vivere del Tao",sub:"Sull'accettazione",pages:"pp. 62-63",text:"Vedete, cari lettori, questo è l'intero segreto. Con l'accettazione di tutte le cose che la vita offre, l'uomo del Tao non si trova mai in conflitto con la realtà. Egli esamina i fatti senza il pensiero di volerli aggirare o cercare di cambiarli. Il cambiamento – e questo è molto importante saperlo – rende efficace da solo la gigantesca intelligenza del Tao. Non deve affatto piacerci quello che percepiamo nella nostra vita, quello che noi esaminiamo obiettivamente e seriamente. Noi possiamo lasciarlo completamente senza commento. La nostra intelligenza, che esiste al di là dell'intelletto, riconosce fastidi, problemi e conflitti, prima che essi giungano alla nostra coscienza. Per questo è inutile stabilire, con le nostre limitate facoltà, le idee su come deve essere la nostra vita e aggrapparvisi."}
+];
+const listEl=document.getElementById('qt-list');
+function paras(t){return qesc(t||'').split(/\n+/).filter(Boolean).map(p=>'<p>'+p+'</p>').join('')||'<p></p>';}
+function render(){
+  listEl.innerHTML='';
+  if(!LIST.length){listEl.innerHTML='<div class="qempty">Nessuna citazione ancora.</div>';return;}
+  LIST.forEach((q,i)=>{
+    const w=document.createElement('div');w.className='qcard'+(openId===q.id?' open':'');
+    if(editId===q.id){w.appendChild(editForm(q));listEl.appendChild(w);return;}
+    const meta=[q.sub,q.pages].filter(Boolean).map(qesc).join(' · ');
+    w.innerHTML='<div class="qhead" onclick="QT.toggle(\''+q.id+'\')"><span class="qcar">▶</span><div class="qhbody"><div class="qbook">'+qesc(q.book||'(senza titolo)')+'</div>'+(meta?'<div class="qmeta">'+meta+'</div>':'')+'</div></div>'+
+      '<div class="qbody">'+paras(q.text)+'</div>'+
+      '<div class="qopts">'+
+        '<span class="op op-edit" onclick="QT.edit(\''+q.id+'\')">✎ Modifica</span>'+
+        '<span class="op op-mv" onclick="QT.move('+i+',-1,event)" title="Su">↑</span>'+
+        '<span class="op op-mv" onclick="QT.move('+i+',1,event)" title="Giù">↓</span>'+
+        '<span class="op op-del" onclick="QT.del('+i+',event)">Elimina</span>'+
+      '</div>';
+    listEl.appendChild(w);
+  });
+}
+function editForm(q){
+  const box=document.createElement('div');box.className='editbox qeditbox';
+  box.innerHTML='<input id="eqb" placeholder="libro / titolo" value="'+qesc(q.book||'')+'">'+
+    '<input id="eqs" placeholder="sottotitolo o capitolo (opzionale)" value="'+qesc(q.sub||'')+'">'+
+    '<input id="eqp" placeholder="pagine (opzionale)" value="'+qesc(q.pages||'')+'">'+
+    '<textarea id="eqt" placeholder="testo della citazione">'+qesc(q.text||'')+'</textarea>'+
+    '<div class="row"><button onclick="QT.saveEdit(\''+q.id+'\')">Salva</button><button class="cancel" onclick="QT.cancel()">Annulla</button></div>';
+  return box;
+}
+const A={};
+A.toggle=(id)=>{if(editId)return;openId=(openId===id)?null:id;render();};
+A.edit=(id)=>{editId=id;openId=null;const b=document.getElementById('qt-addbox');if(b)b.classList.remove('open');render();setTimeout(()=>{const e=document.getElementById('eqb');if(e)e.focus();},0);};
+A.cancel=()=>{editId=null;render();};
+A.saveEdit=(id)=>{const q=LIST.find(x=>x.id===id);if(!q)return;q.book=val('eqb');q.sub=val('eqs');q.pages=val('eqp');q.text=document.getElementById('eqt').value.trim();editId=null;render();persist();};
+A.move=(i,d,ev)=>{ev&&ev.stopPropagation();const j=i+d;if(j<0||j>=LIST.length)return;[LIST[i],LIST[j]]=[LIST[j],LIST[i]];render();persist();};
+A.del=(i,ev)=>{ev&&ev.stopPropagation();if(!confirm('Eliminare questa citazione?'))return;LIST.splice(i,1);openId=null;render();persist();};
+A.toggleAdd=()=>{const b=document.getElementById('qt-addbox');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('qt-book').focus();};
+A.add=()=>{const book=val('qt-book'),sub=val('qt-sub'),pages=val('qt-pages'),text=document.getElementById('qt-text').value.trim();if(!book&&!text)return;LIST.unshift({id:qid(),book,sub,pages,text});['qt-book','qt-sub','qt-pages','qt-text'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('qt-addbox').classList.remove('open');render();persist();};
+A.reload=()=>load();
+A.refresh=()=>load();
+function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(save,1000);}
+async function getSha(){try{const r=await fetch(APIQ+'?t='+Date.now(),{headers:qhdr()});if(r.ok){const j=await r.json();SHA=j.sha;return j;}}catch(e){}SHA=null;return null;}
+async function save(){
+  if(RO)return;
+  if(!qtok()){st('serve il token GitHub per salvare (impostalo nella Checklist o nelle Note)');return;}
+  st('salvataggio…');
+  try{
+    const payload={quotes:LIST,updated:new Date().toISOString()};
+    const content=qe(JSON.stringify(payload));
+    let body=JSON.stringify(SHA?{message:'update citazioni',content,sha:SHA}:{message:'create citazioni',content});
+    let r=await fetch(APIQ,{method:'PUT',headers:{...qhdr(),'Content-Type':'application/json'},body});
+    if(!r.ok&&(r.status===409||r.status===422)){await getSha();body=JSON.stringify({message:'update citazioni',content,sha:SHA});r=await fetch(APIQ,{method:'PUT',headers:{...qhdr(),'Content-Type':'application/json'},body});}
+    if(r.ok){const j=await r.json();SHA=j.content.sha;try{localStorage.setItem('qt_cache',JSON.stringify(payload));}catch(e){}st('salvato '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));}
+    else if(r.status===401||r.status===403){st('token non valido o scaduto');}
+    else st('errore salvataggio ('+r.status+')');
+  }catch(e){st('offline, non salvato');}
+}
+async function load(){
+  st('Caricamento…');
+  try{
+    const j=await getSha();
+    if(j&&j.content){const payload=JSON.parse(qd(j.content.replace(/\n/g,'')));LIST=payload.quotes||[];try{localStorage.setItem('qt_cache',JSON.stringify(payload));}catch(e){}render();st(payload.updated?('aggiornato '+new Date(payload.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'');return;}
+    const c=localStorage.getItem('qt_cache');
+    if(c){LIST=(JSON.parse(c).quotes)||[];render();st('copia locale');return;}
+    LIST=RO?[]:JSON.parse(JSON.stringify(SEED));render();st(RO?'':'pronto');if(!RO&&LIST.length)persist();
+  }catch(e){
+    const c=localStorage.getItem('qt_cache');
+    if(c){try{LIST=(JSON.parse(c).quotes)||[];render();st('offline (copia locale)');return;}catch(_){}}
+    LIST=RO?[]:JSON.parse(JSON.stringify(SEED));render();st('impossibile caricare');
+  }
+}
+load();
+return A;
+})();
 </script>
 </body>
 </html>
