@@ -722,8 +722,9 @@ function render(){
   LIST.forEach((q,i)=>{
     const w=document.createElement('div');w.className='qcard'+(openId===q.id?' open':'');
     if(editId===q.id){w.appendChild(editForm(q));listEl.appendChild(w);return;}
-    const meta=[q.sub,q.pages].filter(Boolean).map(qesc).join(' · ');
-    w.innerHTML='<div class="qhead" onclick="QT.toggle(\''+q.id+'\')"><span class="qcar">▶</span><div class="qhbody"><div class="qbook">'+qesc(q.book||'(senza titolo)')+'</div>'+(meta?'<div class="qmeta">'+meta+'</div>':'')+'</div></div>'+
+    const big=q.sub||q.book||'(senza titolo)';
+    const meta=(q.sub?[q.book,q.pages]:[q.pages]).filter(Boolean).map(qesc).join(' · ');
+    w.innerHTML='<div class="qhead" onclick="QT.toggle(\''+q.id+'\')"><span class="qcar">▶</span><div class="qhbody"><div class="qbook">'+qesc(big)+'</div>'+(meta?'<div class="qmeta">'+meta+'</div>':'')+'</div></div>'+
       '<div class="qbody">'+paras(q.text)+'</div>'+
       '<div class="qopts">'+
         '<span class="op op-edit" onclick="QT.edit(\''+q.id+'\')">✎ Modifica</span>'+
