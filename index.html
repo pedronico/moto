@@ -167,7 +167,11 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 body.readonly #ro-bar{display:flex}
 body.readonly .nactions,body.readonly #nt-addcat,body.readonly .naddrow,body.readonly .niopts,body.readonly .ndrag,body.readonly .nch .shbtn,body.readonly .nt-tokbar,body.readonly #tokbar,body.readonly #addsec,body.readonly .opts,body.readonly .sh .shbtn,body.readonly .addrow,body.readonly .addbox,body.readonly #skipwrap,body.readonly .top>span:last-child,body.readonly #nt-overlay .ov-del{display:none!important}
 body.readonly .nirow,body.readonly .itrow,body.readonly .qhead{cursor:default}
-body.readonly #qt-add,body.readonly .qopts{display:none!important}
+body.readonly #qt-addcat,body.readonly .qopts,body.readonly .qcathead .shbtn,body.readonly .qaddrow{display:none!important}
+.qcathead{display:flex;align-items:center;gap:4px;margin:1.15rem 2px .5rem}
+.qcathead:first-child{margin-top:.25rem}
+.qcatlabel{font-size:13px;font-weight:600;color:#666;flex:1}
+.qcatcount{font-size:12px;color:#aaa;margin-right:2px}
 .qcard{margin-bottom:.6rem;background:#fff;border:1px solid #e0e0de;border-radius:10px;overflow:hidden}
 .qhead{display:flex;gap:9px;align-items:flex-start;padding:.7rem 1rem;cursor:pointer;user-select:none}
 .qhead:active{background:#f5f5f3}
@@ -180,13 +184,22 @@ body.readonly #qt-add,body.readonly .qopts{display:none!important}
 .qcard.open .qbody{display:block}
 .qbody p{margin:0 0 .6rem}
 .qbody p:last-child{margin-bottom:0}
-.qopts{display:none;gap:6px;flex-wrap:wrap;padding:0 1rem .7rem}
+.qphotos{display:flex;flex-wrap:wrap;gap:6px;margin-top:.7rem}
+.qthumb{width:76px;height:76px;object-fit:cover;border-radius:8px;border:1px solid #e0e0de;cursor:pointer}
+.qopts{display:none;gap:6px;flex-wrap:wrap;align-items:center;padding:0 1rem .7rem}
 .qcard.open .qopts{display:flex}
-#qt-add{margin-top:.5rem}
-#qt-addlink{font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
-#qt-addbox textarea,.qeditbox textarea{padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13.5px;min-height:130px;font-family:inherit;line-height:1.5;resize:vertical;width:100%}
+.qmove{font-size:11.5px;padding:4px 8px;border-radius:12px;border:1px solid #ddd;background:#fafafa;color:#555;max-width:150px}
+.qaddrow{padding:.2rem 2px .4rem;font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
+#qt-addcat{margin-top:.75rem}
+#qt-addcatlink{font-size:12.5px;color:#2d9e75;cursor:pointer;user-select:none}
+.qeditbox textarea{padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13.5px;min-height:150px;font-family:inherit;line-height:1.5;resize:vertical;width:100%}
 #qt-status{font-size:13px;color:#888}
 .qempty{font-size:13px;color:#aaa;padding:.4rem 0}
+#qt-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:12px}
+#qt-overlay.open{display:flex}
+#qt-overlay img{max-width:100%;max-height:82vh;border-radius:8px}
+#qt-overlay .ov-btns{display:flex;gap:10px}
+#qt-overlay button{font-size:13px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer}
 </style>
 </head>
 <body>
@@ -246,19 +259,18 @@ body.readonly #qt-add,body.readonly .qopts{display:none!important}
   <h1>Parole da ricordare</h1>
   <div class="top"><span id="qt-status">Caricamento…</span><span><button class="rb" onclick="QT.reload()">🔄 Aggiorna</button></span></div>
   <div id="qt-list"></div>
-  <div id="qt-add">
-    <span id="qt-addlink" onclick="QT.toggleAdd()">+ aggiungi citazione</span>
-    <div class="addbox" id="qt-addbox">
-      <input id="qt-book" placeholder="libro / titolo">
-      <input id="qt-sub" placeholder="sottotitolo o capitolo (opzionale)">
-      <input id="qt-pages" placeholder="pagine (opzionale)">
-      <textarea id="qt-text" placeholder="testo della citazione"></textarea>
-      <button onclick="QT.add()">Aggiungi</button>
+  <div id="qt-addcat">
+    <span id="qt-addcatlink" onclick="QT.toggleAddCat()">+ nuova categoria</span>
+    <div class="addbox" id="qt-addcatbox">
+      <input id="qt-catname" placeholder="nome categoria">
+      <button onclick="QT.addCat()">Aggiungi categoria</button>
     </div>
   </div>
 </div>
 </div>
 <input type="file" id="nt-file" accept="image/*" multiple style="display:none">
+<input type="file" id="qt-file" accept="image/*" multiple style="display:none">
+<div id="qt-overlay"><img id="qt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="QT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="QT.delPhoto()">Elimina foto</button></div></div>
 <div id="nt-overlay"><img id="nt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="NT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="NT.delPhoto()">Elimina foto</button></div></div>
 <div id="nt-install"><div class="ic-card"><div id="ic-body"></div><button class="ov-close" onclick="NT.closeInstall()">Ok</button></div></div>
 <div id="nt-icon"><div class="ic-card">
@@ -697,12 +709,12 @@ async function load(){
 load();
 </script>
 <script>
-/* PAROLE DA RICORDARE — citazioni, file citazioni.json su GitHub (stesso schema della checklist) */
+/* PAROLE DA RICORDARE — citazioni per categoria, file citazioni.json su GitHub */
 const QT=(function(){
 const REPO='pedronico/moto', FILE='citazioni.json';
 const APIQ='https://api.github.com/repos/'+REPO+'/contents/'+FILE;
 const RO=document.body.classList.contains('readonly');
-let SHA=null, LIST=[], openId=null, editId=null, saveTimer=null;
+let SHA=null, CATS=[], openId=null, formRef=null, photoTarget=null, overlayRef=null, saveTimer=null;
 function qid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function qesc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
 function qtok(){return localStorage.getItem('gh_token')||'';}
@@ -710,51 +722,101 @@ function qhdr(){const h={'Accept':'application/vnd.github+json'};const t=qtok();
 function qe(str){return btoa(unescape(encodeURIComponent(str)));}
 function qd(str){return decodeURIComponent(escape(atob(str)));}
 function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function tval(id){const e=document.getElementById(id);return e?e.value.trim():'';}
 function st(t){const e=document.getElementById('qt-status');if(e)e.textContent=t;}
-const SEED=[
-  {id:qid(),book:"L'arte di vivere del Tao",sub:"Sull'accettazione",pages:"pp. 62-63",text:"Vedete, cari lettori, questo è l'intero segreto. Con l'accettazione di tutte le cose che la vita offre, l'uomo del Tao non si trova mai in conflitto con la realtà. Egli esamina i fatti senza il pensiero di volerli aggirare o cercare di cambiarli. Il cambiamento – e questo è molto importante saperlo – rende efficace da solo la gigantesca intelligenza del Tao. Non deve affatto piacerci quello che percepiamo nella nostra vita, quello che noi esaminiamo obiettivamente e seriamente. Noi possiamo lasciarlo completamente senza commento. La nostra intelligenza, che esiste al di là dell'intelletto, riconosce fastidi, problemi e conflitti, prima che essi giungano alla nostra coscienza. Per questo è inutile stabilire, con le nostre limitate facoltà, le idee su come deve essere la nostra vita e aggrapparvisi."}
-];
 const listEl=document.getElementById('qt-list');
 function paras(t){return qesc(t||'').split(/\n+/).filter(Boolean).map(p=>'<p>'+p+'</p>').join('')||'<p></p>';}
-function render(){
-  listEl.innerHTML='';
-  if(!LIST.length){listEl.innerHTML='<div class="qempty">Nessuna citazione ancora.</div>';return;}
-  LIST.forEach((q,i)=>{
-    const w=document.createElement('div');w.className='qcard'+(openId===q.id?' open':'');
-    if(editId===q.id){w.appendChild(editForm(q));listEl.appendChild(w);return;}
-    const big=q.sub||q.book||'(senza titolo)';
-    const meta=(q.sub?[q.book,q.pages]:[q.pages]).filter(Boolean).map(qesc).join(' · ');
-    w.innerHTML='<div class="qhead" onclick="QT.toggle(\''+q.id+'\')"><span class="qcar">▶</span><div class="qhbody"><div class="qbook">'+qesc(big)+'</div>'+(meta?'<div class="qmeta">'+meta+'</div>':'')+'</div></div>'+
-      '<div class="qbody">'+paras(q.text)+'</div>'+
-      '<div class="qopts">'+
-        '<span class="op op-edit" onclick="QT.edit(\''+q.id+'\')">✎ Modifica</span>'+
-        '<span class="op op-mv" onclick="QT.move('+i+',-1,event)" title="Su">↑</span>'+
-        '<span class="op op-mv" onclick="QT.move('+i+',1,event)" title="Giù">↓</span>'+
-        '<span class="op op-del" onclick="QT.del('+i+',event)">Elimina</span>'+
-      '</div>';
-    listEl.appendChild(w);
-  });
+function photosHtml(ci,qi,q){
+  if(!q.photos||!q.photos.length)return '';
+  return '<div class="qphotos">'+q.photos.map((p,pi)=>'<img class="qthumb" src="'+p+'" onclick="event.stopPropagation();QT.viewPhoto('+ci+','+qi+','+pi+')">').join('')+'</div>';
 }
-function editForm(q){
+function moveSelect(ci,qi){
+  if(CATS.length<2)return '';
+  const opts=CATS.map((c,i)=>'<option value="'+i+'"'+(i===ci?' selected':'')+'>'+qesc(c.label)+'</option>').join('');
+  return '<select class="qmove" onchange="QT.moveTo('+ci+','+qi+',this.value)" onclick="event.stopPropagation()">'+opts+'</select>';
+}
+function form(ci,qi){
+  const q=qi!=null?CATS[ci].items[qi]:{sub:'',book:'',pages:'',text:''};
   const box=document.createElement('div');box.className='editbox qeditbox';
-  box.innerHTML='<input id="eqb" placeholder="libro / titolo" value="'+qesc(q.book||'')+'">'+
-    '<input id="eqs" placeholder="sottotitolo o capitolo (opzionale)" value="'+qesc(q.sub||'')+'">'+
-    '<input id="eqp" placeholder="pagine (opzionale)" value="'+qesc(q.pages||'')+'">'+
+  box.innerHTML='<input id="eqs" placeholder="titolo / capitolo" value="'+qesc(q.sub||'')+'">'+
+    '<input id="eqb" placeholder="autore / libro (opzionale)" value="'+qesc(q.book||'')+'">'+
+    '<input id="eqp" placeholder="pagine / fonte (opzionale)" value="'+qesc(q.pages||'')+'">'+
     '<textarea id="eqt" placeholder="testo della citazione">'+qesc(q.text||'')+'</textarea>'+
-    '<div class="row"><button onclick="QT.saveEdit(\''+q.id+'\')">Salva</button><button class="cancel" onclick="QT.cancel()">Annulla</button></div>';
+    '<div class="row"><button onclick="QT.saveForm('+ci+','+(qi==null?'null':qi)+')">Salva</button><button class="cancel" onclick="QT.cancel()">Annulla</button></div>';
   return box;
 }
+function renderCard(ci,qi,q){
+  const w=document.createElement('div');w.className='qcard'+(openId===q.id?' open':'');
+  if(formRef&&formRef.ci===ci&&formRef.qi===qi){w.appendChild(form(ci,qi));return w;}
+  const big=q.sub||q.book||'(senza titolo)';
+  const meta=(q.sub?[q.book,q.pages]:[q.pages]).filter(Boolean).map(qesc).join(' · ');
+  w.innerHTML='<div class="qhead" onclick="QT.toggle(\''+q.id+'\')"><span class="qcar">▶</span><div class="qhbody"><div class="qbook">'+qesc(big)+'</div>'+(meta?'<div class="qmeta">'+meta+'</div>':'')+'</div></div>'+
+    '<div class="qbody">'+paras(q.text)+photosHtml(ci,qi,q)+'</div>'+
+    '<div class="qopts">'+
+      '<span class="op op-edit" onclick="QT.edit('+ci+','+qi+')">✎ Modifica</span>'+
+      '<span class="op" onclick="QT.addPhoto('+ci+','+qi+')">📷 Foto</span>'+
+      '<span class="op op-mv" onclick="QT.move('+ci+','+qi+',-1,event)" title="Su">↑</span>'+
+      '<span class="op op-mv" onclick="QT.move('+ci+','+qi+',1,event)" title="Giù">↓</span>'+
+      '<span class="op op-del" onclick="QT.del('+ci+','+qi+',event)">Elimina</span>'+
+      moveSelect(ci,qi)+
+    '</div>';
+  return w;
+}
+function render(){
+  listEl.innerHTML='';
+  if(!CATS.length){listEl.innerHTML='<div class="qempty">Nessuna categoria. Aggiungine una qui sotto.</div>';return;}
+  CATS.forEach((cat,ci)=>{
+    const head=document.createElement('div');head.className='qcathead';
+    head.innerHTML='<span class="qcatlabel">'+qesc(cat.label)+'</span><span class="qcatcount">'+cat.items.length+'</span>'+
+      '<button class="shbtn" onclick="QT.renameCat('+ci+')" title="Rinomina">✎</button>'+
+      (ci>0?'<button class="shbtn" onclick="QT.moveCat('+ci+',-1)" title="Su">↑</button>':'')+
+      (ci<CATS.length-1?'<button class="shbtn" onclick="QT.moveCat('+ci+',1)" title="Giù">↓</button>':'')+
+      '<button class="shbtn delsec" onclick="QT.delCat('+ci+')" title="Elimina categoria">✕</button>';
+    listEl.appendChild(head);
+    cat.items.forEach((q,qi)=>listEl.appendChild(renderCard(ci,qi,q)));
+    if(formRef&&formRef.ci===ci&&formRef.qi==null){const c=document.createElement('div');c.className='qcard open';c.appendChild(form(ci,null));listEl.appendChild(c);}
+    else{const ar=document.createElement('div');ar.className='qaddrow';ar.textContent='+ aggiungi citazione';ar.onclick=()=>A.startAdd(ci);listEl.appendChild(ar);}
+  });
+}
 const A={};
-A.toggle=(id)=>{if(editId)return;openId=(openId===id)?null:id;render();};
-A.edit=(id)=>{editId=id;openId=null;const b=document.getElementById('qt-addbox');if(b)b.classList.remove('open');render();setTimeout(()=>{const e=document.getElementById('eqb');if(e)e.focus();},0);};
-A.cancel=()=>{editId=null;render();};
-A.saveEdit=(id)=>{const q=LIST.find(x=>x.id===id);if(!q)return;q.book=val('eqb');q.sub=val('eqs');q.pages=val('eqp');q.text=document.getElementById('eqt').value.trim();editId=null;render();persist();};
-A.move=(i,d,ev)=>{ev&&ev.stopPropagation();const j=i+d;if(j<0||j>=LIST.length)return;[LIST[i],LIST[j]]=[LIST[j],LIST[i]];render();persist();};
-A.del=(i,ev)=>{ev&&ev.stopPropagation();if(!confirm('Eliminare questa citazione?'))return;LIST.splice(i,1);openId=null;render();persist();};
-A.toggleAdd=()=>{const b=document.getElementById('qt-addbox');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('qt-book').focus();};
-A.add=()=>{const book=val('qt-book'),sub=val('qt-sub'),pages=val('qt-pages'),text=document.getElementById('qt-text').value.trim();if(!book&&!text)return;LIST.unshift({id:qid(),book,sub,pages,text});['qt-book','qt-sub','qt-pages','qt-text'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('qt-addbox').classList.remove('open');render();persist();};
+A.toggle=(id)=>{if(formRef)return;openId=(openId===id)?null:id;render();};
+A.startAdd=(ci)=>{formRef={ci,qi:null};openId=null;render();setTimeout(()=>{const e=document.getElementById('eqs');if(e)e.focus();},0);};
+A.edit=(ci,qi)=>{formRef={ci,qi};openId=null;render();setTimeout(()=>{const e=document.getElementById('eqs');if(e)e.focus();},0);};
+A.cancel=()=>{formRef=null;render();};
+A.saveForm=(ci,qi)=>{
+  const sub=val('eqs'),book=val('eqb'),pages=val('eqp'),text=document.getElementById('eqt').value.trim();
+  if(!sub&&!book&&!text){formRef=null;render();return;}
+  if(qi==null){const q={id:qid(),sub,book,pages,text,photos:[]};CATS[ci].items.push(q);openId=q.id;}
+  else{const q=CATS[ci].items[qi];q.sub=sub;q.book=book;q.pages=pages;q.text=text;}
+  formRef=null;render();persist();
+};
+A.move=(ci,qi,d,ev)=>{ev&&ev.stopPropagation();const a=CATS[ci].items,j=qi+d;if(j<0||j>=a.length)return;[a[qi],a[j]]=[a[j],a[qi]];render();persist();};
+A.moveTo=(ci,qi,tci)=>{tci=+tci;if(tci===ci||isNaN(tci)||!CATS[tci])return;const q=CATS[ci].items.splice(qi,1)[0];CATS[tci].items.push(q);openId=q.id;render();persist();};
+A.del=(ci,qi,ev)=>{ev&&ev.stopPropagation();if(!confirm('Eliminare questa citazione?'))return;CATS[ci].items.splice(qi,1);openId=null;render();persist();};
+A.renameCat=(ci)=>{const v=prompt('Rinomina categoria:',CATS[ci].label);if(v!=null&&v.trim()){CATS[ci].label=v.trim();render();persist();}};
+A.moveCat=(ci,d)=>{const j=ci+d;if(j<0||j>=CATS.length)return;[CATS[ci],CATS[j]]=[CATS[j],CATS[ci]];render();persist();};
+A.delCat=(ci)=>{const n=CATS[ci].items.length;if(!confirm(n?('Eliminare "'+CATS[ci].label+'" e le sue '+n+' citazioni?'):('Eliminare "'+CATS[ci].label+'"?')))return;CATS.splice(ci,1);render();persist();};
+A.toggleAddCat=()=>{const b=document.getElementById('qt-addcatbox');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('qt-catname').focus();};
+A.addCat=()=>{const v=val('qt-catname');if(!v)return;CATS.push({id:qid(),label:v,items:[]});document.getElementById('qt-catname').value='';document.getElementById('qt-addcatbox').classList.remove('open');render();persist();};
+A.addPhoto=(ci,qi)=>{photoTarget={ci,qi};document.getElementById('qt-file').click();};
+A.viewPhoto=(ci,qi,pi)=>{overlayRef={ci,qi,pi};document.getElementById('qt-ovimg').src=CATS[ci].items[qi].photos[pi];document.getElementById('qt-overlay').classList.add('open');document.querySelector('#qt-overlay .ov-del').style.display=RO?'none':'';};
+A.closeOverlay=()=>{document.getElementById('qt-overlay').classList.remove('open');overlayRef=null;};
+A.delPhoto=()=>{if(!overlayRef)return;const{ci,qi,pi}=overlayRef;CATS[ci].items[qi].photos.splice(pi,1);A.closeOverlay();render();persist();};
 A.reload=()=>load();
 A.refresh=()=>load();
+document.getElementById('qt-file').addEventListener('change',async function(){
+  if(!photoTarget||!this.files.length){this.value='';return;}
+  st('elaboro foto…');
+  for(const f of this.files){try{const d=await resize(f);const q=CATS[photoTarget.ci].items[photoTarget.qi];q.photos=q.photos||[];q.photos.push(d);}catch(e){}}
+  this.value='';render();persist();
+});
+function resize(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const max=1400;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',0.72));};img.onerror=rej;const fr=new FileReader();fr.onload=()=>img.src=fr.result;fr.onerror=rej;fr.readAsDataURL(file);});}
+function normalize(cats){return (cats||[]).map(c=>({id:c.id||qid(),label:c.label||'Senza nome',items:(c.items||[]).map(q=>({id:q.id||qid(),sub:q.sub||'',book:q.book||'',pages:q.pages||'',text:q.text||'',photos:q.photos||[]}))}));}
+function migrate(payload){
+  if(payload.cats)return normalize(payload.cats);
+  if(payload.quotes)return normalize([{id:qid(),label:'Spirito',items:payload.quotes}]);
+  return [];
+}
 function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(save,1000);}
 async function getSha(){try{const r=await fetch(APIQ+'?t='+Date.now(),{headers:qhdr()});if(r.ok){const j=await r.json();SHA=j.sha;return j;}}catch(e){}SHA=null;return null;}
 async function save(){
@@ -762,7 +824,7 @@ async function save(){
   if(!qtok()){st('serve il token GitHub per salvare (impostalo nella Checklist o nelle Note)');return;}
   st('salvataggio…');
   try{
-    const payload={quotes:LIST,updated:new Date().toISOString()};
+    const payload={cats:CATS,updated:new Date().toISOString()};
     const content=qe(JSON.stringify(payload));
     let body=JSON.stringify(SHA?{message:'update citazioni',content,sha:SHA}:{message:'create citazioni',content});
     let r=await fetch(APIQ,{method:'PUT',headers:{...qhdr(),'Content-Type':'application/json'},body});
@@ -776,14 +838,14 @@ async function load(){
   st('Caricamento…');
   try{
     const j=await getSha();
-    if(j&&j.content){const payload=JSON.parse(qd(j.content.replace(/\n/g,'')));LIST=payload.quotes||[];try{localStorage.setItem('qt_cache',JSON.stringify(payload));}catch(e){}render();st(payload.updated?('aggiornato '+new Date(payload.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'');return;}
+    if(j&&j.content){const payload=JSON.parse(qd(j.content.replace(/\n/g,'')));CATS=migrate(payload);try{localStorage.setItem('qt_cache',JSON.stringify(payload));}catch(e){}render();st(payload.updated?('aggiornato '+new Date(payload.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})):'');return;}
     const c=localStorage.getItem('qt_cache');
-    if(c){LIST=(JSON.parse(c).quotes)||[];render();st('copia locale');return;}
-    LIST=RO?[]:JSON.parse(JSON.stringify(SEED));render();st(RO?'':'pronto');if(!RO&&LIST.length)persist();
+    if(c){CATS=migrate(JSON.parse(c));render();st('copia locale');return;}
+    CATS=[];render();st(RO?'':'pronto');
   }catch(e){
     const c=localStorage.getItem('qt_cache');
-    if(c){try{LIST=(JSON.parse(c).quotes)||[];render();st('offline (copia locale)');return;}catch(_){}}
-    LIST=RO?[]:JSON.parse(JSON.stringify(SEED));render();st('impossibile caricare');
+    if(c){try{CATS=migrate(JSON.parse(c));render();st('offline (copia locale)');return;}catch(_){}}
+    CATS=[];render();st('impossibile caricare');
   }
 }
 load();
