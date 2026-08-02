@@ -209,22 +209,22 @@ body.readonly #qt-addcat,body.readonly .qopts,body.readonly .qcathead .shbtn,bod
   <button class="tab" data-tab="checklist">Checklist</button>
   <button class="tab" data-tab="quotes">Parole</button>
 </div>
+<div class="nt-tokbar" id="nt-tokbar">
+  Per il backup su GitHub serve il token (una volta sola, resta su questo dispositivo):
+  <input type="password" id="nt-tok" placeholder="github_pat_...">
+  <button onclick="NT.saveTok()">Salva token</button>
+</div>
+<div class="nactions">
+  <button class="rb" onclick="NT.install()">📲 Installa</button>
+  <button class="rb" onclick="NT.iconEdit()">🎨 Icona</button>
+  <button class="rb" onclick="NT.print()">🖨 Stampa</button>
+  <button class="rb" onclick="NT.backup()">☁ Backup note</button>
+  <button class="rb" onclick="NT.restore()">⟲ Ripristina note</button>
+  <button class="rb" onclick="NT.showPat()">🔑 PAT</button>
+</div>
 <div id="ro-bar"><span>👁 Sola lettura</span><span><button class="rb" onclick="roRefresh()">🔄 Aggiorna</button><button class="rb" onclick="NT.print()">🖨 Stampa</button></span></div>
 <div id="view-notes" class="view active">
-  <div class="nt-tokbar" id="nt-tokbar">
-    Per il backup su GitHub serve il token (una volta sola, resta su questo dispositivo):
-    <input type="password" id="nt-tok" placeholder="github_pat_...">
-    <button onclick="NT.saveTok()">Salva token</button>
-  </div>
   <div class="nbar"><span id="nt-status">Caricamento…</span></div>
-  <div class="nactions">
-    <button class="rb" onclick="NT.install()">📲 Installa</button>
-    <button class="rb" onclick="NT.iconEdit()">🎨 Icona</button>
-    <button class="rb" onclick="NT.print()">🖨 Stampa</button>
-    <button class="rb" onclick="NT.backup()">☁ Backup</button>
-    <button class="rb" onclick="NT.restore()">⟲ Ripristina</button>
-    <button class="rb" onclick="NT.showPat()">🔑 PAT</button>
-  </div>
   <div id="nt-printhead"></div>
   <div id="nt-list"></div>
   <div id="nt-addcat">
@@ -342,6 +342,7 @@ let openItem=null, editItem=null, editType=null, addForm=null;
 let photoTarget=null, overlayRef=null, saveTimer=null, sha=null;
 const RO=document.body.classList.contains('readonly');
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+function linkify(s){const escaped=esc(s);return escaped.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${url}</a>`);}
 function tok(){return localStorage.getItem('gh_token')||'';}
 function b64e(str){return btoa(unescape(encodeURIComponent(str)));}
 function b64d(str){return decodeURIComponent(escape(atob(str)));}
@@ -384,7 +385,7 @@ function renderItem(ci,it,ii){
   else if(it.type==='link'&&it.value)valHtml='<div class="nival"><a href="'+esc(linkHref(it.value))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(it.value)+'</a></div>';
   else if(it.type==='place'&&it.value)valHtml='<a class="nmap" href="'+esc(mapsUrl(it.value))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 Apri in mappe</a>';
   const titleHtml=it.title?'<div class="nititle">'+esc(it.title)+'</div>':'';
-  const textHtml=it.text?'<div class="nitext">'+esc(it.text)+'</div>':'';
+  const textHtml=it.text?'<div class="nitext">'+linkify(it.text)+'</div>':'';
   let photosHtml='';
   if(it.photos&&it.photos.length)photosHtml='<div class="nphotos">'+it.photos.map((p,pi)=>'<img class="nthumb" src="'+p+'" onclick="event.stopPropagation();NT.viewPhoto('+ci+','+ii+','+pi+')">').join('')+'</div>';
   w.innerHTML='<div class="nirow" onclick="NT.toggleItem(\''+id+'\')"><span class="nic">'+T.icon+'</span><div class="nibody">'+titleHtml+textHtml+valHtml+photosHtml+'</div></div>'+
@@ -604,6 +605,10 @@ const DEFAULT=[
 ];
 let SEC=[];let saveTimer=null,openId=null,editingId=null;
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function linkify(s){
+  const escaped=esc(s);
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${url}</a>`);
+}
 const cl=document.getElementById("cl");
 function render(){
   cl.innerHTML="";const skiplist=document.getElementById("skiplist");skiplist.innerHTML="";
@@ -628,7 +633,7 @@ function render(){
       const link=(it.link&&st==="toorder")?`<div class="lnk"><a href="${esc(it.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(it.link)}</a></div>`:"";
       let trackHtml="";
       if(st==="incoming"&&it.track&&(it.track.num||it.track.link)){const numTxt=it.track.num?esc(it.track.num):"tracking";trackHtml=it.track.link?`<div class="trk">📦 <a href="${esc(it.track.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${numTxt}</a></div>`:`<div class="trk">📦 ${numTxt}</div>`;}
-      w.innerHTML=`<div class="itrow" onclick="toggleOpts('${id}')">${badge}<div style="flex:1"><div class="lb">${esc(it.t)}</div>${it.n?`<div class="nt">${esc(it.n)}</div>`:""}${link}${trackHtml}</div></div>
+      w.innerHTML=`<div class="itrow" onclick="toggleOpts('${id}')">${badge}<div style="flex:1"><div class="lb">${esc(it.t)}</div>${it.n?`<div class="nt">${linkify(it.n)}</div>`:""}${link}${trackHtml}</div></div>
 <div class="opts${openId===id?' open':''}" id="op${id}">
   <span class="op op-ok" onclick="setState(${si},${ii},'ok',event)">OK</span>
   <span class="op op-install" onclick="setState(${si},${ii},'install',event)">Da installare</span>
