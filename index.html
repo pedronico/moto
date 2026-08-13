@@ -108,6 +108,8 @@ h1{font-size:15px;font-weight:500;margin-bottom:.75rem;color:#555}
 .nival.tel a{color:#1d7d5a;font-weight:500}
 .nmap{display:inline-block;margin-top:5px;font-size:12px;color:#2d9e75;border:1px solid #bfe3d3;border-radius:8px;padding:3px 10px;text-decoration:none}
 .nphotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.nfiles{display:flex;flex-direction:column;gap:5px;margin-top:7px}
+.nfile{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#2b5fad;background:#eef3fb;border:1px solid #dbe6f7;border-radius:8px;padding:5px 10px;text-decoration:none;width:fit-content}
 .nthumb{width:62px;height:62px;border-radius:8px;object-fit:cover;border:1px solid #e0e0de;cursor:pointer;background:#eee}
 .niopts{display:none;padding:.35rem 1rem .7rem;gap:6px;flex-wrap:wrap;align-items:center}
 .niopts.open{display:flex}
@@ -268,7 +270,7 @@ body.readonly #qt-addcat,body.readonly .qopts,body.readonly .qcathead .shbtn,bod
   </div>
 </div>
 </div>
-<input type="file" id="nt-file" accept="image/*" multiple style="display:none">
+<input type="file" id="nt-file" accept="image/*,application/pdf" multiple style="display:none">
 <input type="file" id="qt-file" accept="image/*" multiple style="display:none">
 <div id="qt-overlay"><img id="qt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="QT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="QT.delPhoto()">Elimina foto</button></div></div>
 <div id="nt-overlay"><img id="nt-ovimg" alt=""><div class="ov-btns"><button class="ov-close" onclick="NT.closeOverlay()">Chiudi</button><button class="ov-del" onclick="NT.delPhoto()">Elimina foto</button></div></div>
@@ -388,10 +390,12 @@ function renderItem(ci,it,ii){
   const textHtml=it.text?'<div class="nitext">'+linkify(it.text)+'</div>':'';
   let photosHtml='';
   if(it.photos&&it.photos.length)photosHtml='<div class="nphotos">'+it.photos.map((p,pi)=>'<img class="nthumb" src="'+p+'" onclick="event.stopPropagation();NT.viewPhoto('+ci+','+ii+','+pi+')">').join('')+'</div>';
-  w.innerHTML='<div class="nirow" onclick="NT.toggleItem(\''+id+'\')"><span class="nic">'+T.icon+'</span><div class="nibody">'+titleHtml+textHtml+valHtml+photosHtml+'</div></div>'+
+  let filesHtml='';
+  if(it.files&&it.files.length)filesHtml='<div class="nfiles">'+it.files.map((fl,fi)=>'<a class="nfile" href="'+fl.data+'" download="'+esc(fl.name)+'" onclick="event.stopPropagation()">📄 '+esc(fl.name)+'</a>').join('')+'</div>';
+  w.innerHTML='<div class="nirow" onclick="NT.toggleItem(\''+id+'\')"><span class="nic">'+T.icon+'</span><div class="nibody">'+titleHtml+textHtml+valHtml+photosHtml+filesHtml+'</div></div>'+
     '<div class="niopts'+(openItem===id?' open':'')+'">'+
       '<span class="op op-edit" onclick="NT.startEdit(\''+id+'\')">✎ Modifica</span>'+
-      '<span class="op" onclick="NT.addPhoto('+ci+','+ii+')">📷 Foto</span>'+
+      '<span class="op" onclick="NT.addPhoto('+ci+','+ii+')">📎 Allegato</span>'+
       '<span class="op op-mv" onclick="NT.moveItem('+ci+','+ii+',-1)">↑</span>'+
       '<span class="op op-mv" onclick="NT.moveItem('+ci+','+ii+',1)">↓</span>'+
       '<span class="op op-del" onclick="NT.delItem('+ci+','+ii+')">Elimina</span>'+
@@ -407,7 +411,8 @@ function buildForm(ci,ii,type){
   if(T.hasVal)fields+='<input id="fv_'+fid+'" placeholder="'+T.ph+'" value="'+esc(it?it.value:'')+'">';
   if(type==='note'||type==='place'){const h=type==='note'?T.ph:'nota (opzionale)';fields+='<textarea id="fx_'+fid+'" placeholder="'+h+'">'+esc(it?it.text:'')+'</textarea>';}
   const photosHtml=(it&&it.photos&&it.photos.length)?'<div class="nphotos">'+it.photos.map((p,pi)=>'<img class="nthumb" src="'+p+'" onclick="NT.viewPhoto('+ci+','+ii+','+pi+')">').join('')+'</div>':'';
-  box.innerHTML='<div class="ntypes">'+chips+'</div>'+fields+photosHtml+'<div class="row"><button class="save" onclick="NT.saveItem('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">Salva</button><span class="op" onclick="NT.addPhotoForm('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">📷 Foto</span><button class="cancel" onclick="NT.cancelForm()">Annulla</button></div>';
+  const filesHtml=(it&&it.files&&it.files.length)?'<div class="nfiles">'+it.files.map((fl,fi)=>'<a class="nfile" href="'+fl.data+'" download="'+esc(fl.name)+'">📄 '+esc(fl.name)+'</a>').join('')+'</div>':'';
+  box.innerHTML='<div class="ntypes">'+chips+'</div>'+fields+photosHtml+filesHtml+'<div class="row"><button class="save" onclick="NT.saveItem('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">Salva</button><span class="op" onclick="NT.addPhotoForm('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">📎 Allegato</span><button class="cancel" onclick="NT.cancelForm()">Annulla</button></div>';
   return box;
 }
 const A={};
@@ -451,13 +456,31 @@ A.addPhotoForm=(ci,ii,type)=>{
 };
 document.getElementById('nt-file').addEventListener('change',async function(){
   if(!photoTarget||!this.files.length){this.value='';return;}
-  setStatus('elaboro foto…');
-  for(const f of this.files){try{const d=await resize(f);const it=CATS[photoTarget.ci].items[photoTarget.ii];it.photos=it.photos||[];it.photos.push(d);}catch(e){}}
+  setStatus('elaboro allegati…');
+  let bigWarn=false;
+  for(const f of this.files){
+    try{
+      const it=CATS[photoTarget.ci].items[photoTarget.ii];
+      if(f.type==='application/pdf'){
+        if(f.size>3*1024*1024)bigWarn=true;
+        const d=await readAsDataURL(f);
+        it.files=it.files||[];
+        it.files.push({name:f.name,data:d});
+      }else{
+        const d=await resize(f);
+        it.photos=it.photos||[];
+        it.photos.push(d);
+      }
+    }catch(e){}
+  }
   this.value='';render();persist();
+  setStatus(bigWarn?'salvato in locale — PDF pesante, il backup su GitHub potrebbe fallire':'salvato in locale');
 });
+function readAsDataURL(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file);});}
 function resize(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const max=1600;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',0.72));};img.onerror=rej;const fr=new FileReader();fr.onload=()=>img.src=fr.result;fr.onerror=rej;fr.readAsDataURL(file);});}
 A.viewPhoto=(ci,ii,pi)=>{overlayRef={ci,ii,pi};document.getElementById('nt-ovimg').src=CATS[ci].items[ii].photos[pi];document.getElementById('nt-overlay').classList.add('open');};
 A.closeOverlay=()=>{document.getElementById('nt-overlay').classList.remove('open');overlayRef=null;};
+A.delFile=(ci,ii,fi)=>{if(!confirm('Eliminare questo allegato?'))return;CATS[ci].items[ii].files.splice(fi,1);render();persist();};
 A.delPhoto=()=>{if(!overlayRef)return;const{ci,ii,pi}=overlayRef;CATS[ci].items[ii].photos.splice(pi,1);A.closeOverlay();render();persist();};
 let drag=null;
 list.addEventListener('pointerdown',e=>{const h=e.target.closest('.ndrag');if(!h)return;e.preventDefault();const card=h.closest('.ncat');drag={card,startY:e.clientY};card.classList.add('dragging');h.setPointerCapture&&h.setPointerCapture(e.pointerId);});
@@ -499,7 +522,7 @@ async function fetchRemote(){
   try{const r=await fetch(API+'?t='+Date.now(),{headers:hdr()});if(r.ok){const j=await r.json();return JSON.parse(b64d(j.content.replace(/\n/g,'')));}}catch(e){}
   return null;
 }
-function normalize(cats){return (cats||[]).map(c=>({id:c.id||cid(),label:c.label||'Senza nome',collapsed:!!c.collapsed,items:(c.items||[]).map(it=>({id:it.id||cid(),type:it.type||'note',title:it.title||'',value:it.value||'',text:it.text||it.n||'',photos:it.photos||[]}))}));}
+function normalize(cats){return (cats||[]).map(c=>({id:c.id||cid(),label:c.label||'Senza nome',collapsed:!!c.collapsed,items:(c.items||[]).map(it=>({id:it.id||cid(),type:it.type||'note',title:it.title||'',value:it.value||'',text:it.text||it.n||'',photos:it.photos||[],files:it.files||[]}))}));}
 async function init(){
   if(RO){
     setStatus('👁 sola lettura · aggiornamento…');
