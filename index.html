@@ -406,7 +406,8 @@ function buildForm(ci,ii,type){
   let fields='<input id="ft_'+fid+'" placeholder="titolo'+(type==='note'?' (opzionale)':'')+'" value="'+esc(it?it.title:'')+'">';
   if(T.hasVal)fields+='<input id="fv_'+fid+'" placeholder="'+T.ph+'" value="'+esc(it?it.value:'')+'">';
   if(type==='note'||type==='place'){const h=type==='note'?T.ph:'nota (opzionale)';fields+='<textarea id="fx_'+fid+'" placeholder="'+h+'">'+esc(it?it.text:'')+'</textarea>';}
-  box.innerHTML='<div class="ntypes">'+chips+'</div>'+fields+'<div class="row"><button class="save" onclick="NT.saveItem('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">Salva</button><button class="cancel" onclick="NT.cancelForm()">Annulla</button></div>';
+  const photosHtml=(it&&it.photos&&it.photos.length)?'<div class="nphotos">'+it.photos.map((p,pi)=>'<img class="nthumb" src="'+p+'" onclick="NT.viewPhoto('+ci+','+ii+','+pi+')">').join('')+'</div>':'';
+  box.innerHTML='<div class="ntypes">'+chips+'</div>'+fields+photosHtml+'<div class="row"><button class="save" onclick="NT.saveItem('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">Salva</button><span class="op" onclick="NT.addPhotoForm('+ci+','+(ii==null?'null':ii)+',\''+type+'\')">📷 Foto</span><button class="cancel" onclick="NT.cancelForm()">Annulla</button></div>';
   return box;
 }
 const A={};
@@ -433,6 +434,21 @@ A.saveItem=(ci,ii,type)=>{
 A.moveItem=(ci,ii,dir)=>{const a=CATS[ci].items,j=ii+dir;if(j<0||j>=a.length)return;[a[ii],a[j]]=[a[j],a[ii]];openItem=ci+'_'+j;render();persist();};
 A.delItem=(ci,ii)=>{if(!confirm('Eliminare questa voce?'))return;CATS[ci].items.splice(ii,1);openItem=null;render();persist();};
 A.addPhoto=(ci,ii)=>{photoTarget={ci,ii};document.getElementById('nt-file').click();};
+A.addPhotoForm=(ci,ii,type)=>{
+  const isNew=(ii===null);
+  const fid=isNew?('new'+ci):('e'+ci+'_'+ii);
+  const f=readForm(fid);
+  if(isNew){
+    CATS[ci].items.push({id:cid(),type,title:f.title,value:f.value,text:f.text,photos:[]});
+    ii=CATS[ci].items.length-1;
+    editItem=ci+'_'+ii;editType=type;addForm=null;
+  }else{
+    const it=CATS[ci].items[ii];
+    it.type=type;it.title=f.title;it.value=f.value;it.text=f.text;
+  }
+  persist();
+  A.addPhoto(ci,ii);
+};
 document.getElementById('nt-file').addEventListener('change',async function(){
   if(!photoTarget||!this.files.length){this.value='';return;}
   setStatus('elaboro foto…');
