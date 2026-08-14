@@ -392,9 +392,11 @@ function renderItem(ci,it,ii){
   if(it.photos&&it.photos.length)photosHtml='<div class="nphotos">'+it.photos.map((p,pi)=>'<img class="nthumb" src="'+p+'" onclick="event.stopPropagation();NT.viewPhoto('+ci+','+ii+','+pi+')">').join('')+'</div>';
   let filesHtml='';
   if(it.files&&it.files.length)filesHtml='<div class="nfiles">'+it.files.map((fl,fi)=>'<a class="nfile" href="'+fl.data+'" download="'+esc(fl.name)+'" onclick="event.stopPropagation()">📄 '+esc(fl.name)+'</a>').join('')+'</div>';
+  const copyBtn=it.text?'<span class="op" onclick="NT.copyText('+ci+','+ii+')">📋 Copia testo</span>':'';
   w.innerHTML='<div class="nirow" onclick="NT.toggleItem(\''+id+'\')"><span class="nic">'+T.icon+'</span><div class="nibody">'+titleHtml+textHtml+valHtml+photosHtml+filesHtml+'</div></div>'+
     '<div class="niopts'+(openItem===id?' open':'')+'">'+
       '<span class="op op-edit" onclick="NT.startEdit(\''+id+'\')">✎ Modifica</span>'+
+      copyBtn+
       '<span class="op" onclick="NT.addPhoto('+ci+','+ii+')">📎 Allegato</span>'+
       '<span class="op op-mv" onclick="NT.moveItem('+ci+','+ii+',-1)">↑</span>'+
       '<span class="op op-mv" onclick="NT.moveItem('+ci+','+ii+',1)">↓</span>'+
@@ -478,6 +480,21 @@ document.getElementById('nt-file').addEventListener('change',async function(){
 });
 function readAsDataURL(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file);});}
 function resize(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const max=1600;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',0.72));};img.onerror=rej;const fr=new FileReader();fr.onload=()=>img.src=fr.result;fr.onerror=rej;fr.readAsDataURL(file);});}
+A.copyText=(ci,ii)=>{
+  const it=CATS[ci].items[ii];
+  const txt=(it&&it.text)||'';
+  if(!txt){setStatus('nessun testo da copiare');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>setStatus('testo copiato')).catch(()=>fallbackCopy(txt));
+  }else fallbackCopy(txt);
+};
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea');
+  ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');setStatus('testo copiato');}catch(e){setStatus('copia non riuscita');}
+  document.body.removeChild(ta);
+}
 A.viewPhoto=(ci,ii,pi)=>{overlayRef={ci,ii,pi};document.getElementById('nt-ovimg').src=CATS[ci].items[ii].photos[pi];document.getElementById('nt-overlay').classList.add('open');};
 A.closeOverlay=()=>{document.getElementById('nt-overlay').classList.remove('open');overlayRef=null;};
 A.delFile=(ci,ii,fi)=>{if(!confirm('Eliminare questo allegato?'))return;CATS[ci].items[ii].files.splice(fi,1);render();persist();};
